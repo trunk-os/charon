@@ -19,6 +19,11 @@ impl PromptParser {
         for ch in s.chars() {
             if inside && ch == DELIMITER {
                 inside = false;
+                if tmp.is_empty() {
+                    // @@, not a template
+                    continue;
+                }
+
                 for prompt in &self.collection().to_vec() {
                     if prompt.template == tmp {
                         v.push(prompt.clone())
@@ -43,6 +48,12 @@ impl PromptParser {
         for ch in s.chars() {
             if inside && ch == DELIMITER {
                 inside = false;
+                if tmp.is_empty() {
+                    // @@, not a template
+                    out.push('@');
+                    continue;
+                }
+
                 let mut matched = false;
                 for response in &responses {
                     if response.template == tmp {
@@ -249,7 +260,20 @@ mod tests {
         );
         assert!(parser.template("@".into(), vec![]).is_ok());
         assert_eq!(parser.template("@".into(), vec![]).unwrap(), "@");
-        assert!(parser.template("@@".into(), vec![]).is_err());
+        assert!(parser.template("@@".into(), vec![]).is_ok());
+        assert_eq!(parser.template("@@".into(), vec![]).unwrap(), "@");
+        assert_eq!(
+            parser
+                .template("bgates@microsoft.com".into(), vec![])
+                .unwrap(),
+            "bgates@microsoft.com"
+        );
+        assert_eq!(
+            parser
+                .template("bgates@@microsoft.com".into(), vec![])
+                .unwrap(),
+            "bgates@microsoft.com"
+        );
     }
 
     #[test]
@@ -288,6 +312,10 @@ mod tests {
         assert_eq!(*parser.prompts("@".into()).unwrap(), vec![]);
         assert_eq!(*parser.prompts("@test".into()).unwrap(), vec![]);
         assert_eq!(*parser.prompts("@file @shoesize".into()).unwrap(), vec![]);
+        assert_eq!(
+            *parser.prompts("bgates@microsoft.com".into()).unwrap(),
+            vec![]
+        );
     }
 
     #[test]
