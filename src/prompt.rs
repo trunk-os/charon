@@ -1,7 +1,69 @@
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
+const DELIMITER: char = '@';
+
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
-pub struct PromptParser(String, PromptCollection);
+pub struct PromptParser(PromptCollection);
+
+impl PromptParser {
+    pub fn collection(&self) -> &PromptCollection {
+        &self.0
+    }
+
+    pub fn prompts(&self, s: String) -> Result<Vec<Prompt>> {
+        let mut v = Vec::new();
+        self.find_prompt(s, |p| v.push(p.clone()));
+        Ok(v)
+    }
+
+    pub fn template(&self, s: String, responses: Vec<PromptResponse>) -> Result<String> {
+        let mut tmp = String::new();
+        let mut inside = false;
+        let mut out = String::new();
+
+        for ch in s.chars() {
+            if ch == DELIMITER {
+                inside = true
+            } else if inside && ch == DELIMITER {
+                inside = false;
+                for response in &responses {
+                    if response.template == tmp {
+                        out += &response.to_string()
+                    }
+                }
+                tmp = String::new();
+            } else if inside {
+                tmp.push(ch)
+            } else {
+                out.push(ch)
+            }
+        }
+
+        Ok(out)
+    }
+
+    fn find_prompt(&self, s: String, mut f: impl FnMut(&Prompt)) {
+        let mut inside = false;
+        let mut tmp = String::new();
+
+        for ch in s.chars() {
+            if ch == DELIMITER {
+                inside = true
+            } else if inside && ch == DELIMITER {
+                inside = false;
+                for prompt in &self.0 .0 {
+                    if prompt.template == tmp {
+                        f(&prompt)
+                    }
+                }
+                tmp = String::new();
+            } else if inside {
+                tmp.push(ch)
+            }
+        }
+    }
+}
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Prompt {
@@ -43,8 +105,24 @@ pub enum Input {
     String(String),
 }
 
+impl ToString for Input {
+    fn to_string(&self) -> String {
+        match self {
+            Input::Integer(x) => x.to_string(),
+            Input::SignedInteger(x) => x.to_string(),
+            Input::String(x) => x.to_string(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct PromptResponse {
     pub template: String,
     pub input: Input,
+}
+
+impl ToString for PromptResponse {
+    fn to_string(&self) -> String {
+        self.input.to_string()
+    }
 }
