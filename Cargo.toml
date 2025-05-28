@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-serde = "*"
+serde = { version = "*", features = [ "derive" ] }
 serde_json = "*"
 git2 = { version = "*", features = [ "https" ] }
 anyhow = "*"
