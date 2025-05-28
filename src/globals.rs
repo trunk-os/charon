@@ -40,7 +40,7 @@ impl GlobalRegistry {
     }
 
     pub fn set(&self, global: Global) -> Result<()> {
-        Ok(serde_json::to_writer(
+        Ok(serde_json::to_writer_pretty(
             std::fs::OpenOptions::new().create(true).write(true).open(
                 self.root
                     .join("variables")

@@ -150,7 +150,7 @@ impl Package {
             .write(true)
             .open(name)?;
 
-        serde_json::to_writer(&f, self)?;
+        serde_json::to_writer_pretty(&f, self)?;
         Ok(f.sync_all()?)
     }
 }
