@@ -15,10 +15,15 @@ pub struct PromptCollection(Vec<Prompt>);
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum InputType {
+    #[serde(rename = "integer")]
     Integer,
+    #[serde(rename = "signed_integer")]
     SignedInteger,
+    #[serde(rename = "select")]
     Select(Vec<SelectOption>),
+    #[serde(rename = "name")]
     Name,
+    #[serde(rename = "path")]
     Path,
 }
 
@@ -30,8 +35,11 @@ pub struct SelectOption {
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Input {
+    #[serde(rename = "integer")]
     Integer(u64),
+    #[serde(rename = "signed_integer")]
     SignedInteger(i64),
+    #[serde(rename = "string")]
     String(String),
 }
 

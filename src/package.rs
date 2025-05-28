@@ -1,10 +1,10 @@
+use crate::PromptCollection;
+use anyhow::Result;
+use serde::{Deserialize, Serialize};
 use std::{
     path::{Path, PathBuf},
     str::FromStr,
 };
-
-use anyhow::Result;
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Package {
@@ -20,6 +20,8 @@ pub struct Package {
     pub system: Option<System>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resources: Option<Resources>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompts: Option<PromptCollection>,
 }
 
 impl PartialOrd for Package {
