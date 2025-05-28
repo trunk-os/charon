@@ -11,3 +11,4 @@ anyhow = "*"
 
 [dev-dependencies]
 tempfile = "*"
+lazy_static = "*"

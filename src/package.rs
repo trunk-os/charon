@@ -132,7 +132,6 @@ impl Package {
             .join("packages")
             .join(name);
         let name = pb.join(&format!("{}.json", version));
-        eprintln!("{:?}", name);
         Ok(serde_json::from_reader(
             std::fs::OpenOptions::new().read(true).open(name)?,
         )?)
@@ -144,10 +143,8 @@ impl Package {
             .join(&self.title.name);
 
         std::fs::create_dir_all(&pb)?;
-        eprintln!("{:?}", std::fs::read_dir(&pb)?);
 
         let name = pb.join(&format!("{}.json", self.title.version));
-        eprintln!("{:?}", name);
         let f = std::fs::OpenOptions::new()
             .create(true)
             .write(true)
