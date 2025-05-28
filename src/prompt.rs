@@ -13,7 +13,25 @@ impl PromptParser {
 
     pub fn prompts(&self, s: String) -> Result<Vec<Prompt>> {
         let mut v = Vec::new();
-        self.find_prompt(s, |p| v.push(p.clone()));
+        let mut inside = false;
+        let mut tmp = String::new();
+
+        for ch in s.chars() {
+            if ch == DELIMITER {
+                inside = true
+            } else if inside && ch == DELIMITER {
+                inside = false;
+                for prompt in &self.collection().to_vec() {
+                    if prompt.template == tmp {
+                        v.push(prompt.clone())
+                    }
+                }
+                tmp = String::new();
+            } else if inside {
+                tmp.push(ch)
+            }
+        }
+
         Ok(v)
     }
 
@@ -42,27 +60,6 @@ impl PromptParser {
 
         Ok(out)
     }
-
-    fn find_prompt(&self, s: String, mut f: impl FnMut(&Prompt)) {
-        let mut inside = false;
-        let mut tmp = String::new();
-
-        for ch in s.chars() {
-            if ch == DELIMITER {
-                inside = true
-            } else if inside && ch == DELIMITER {
-                inside = false;
-                for prompt in &self.0 .0 {
-                    if prompt.template == tmp {
-                        f(&prompt)
-                    }
-                }
-                tmp = String::new();
-            } else if inside {
-                tmp.push(ch)
-            }
-        }
-    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -74,6 +71,12 @@ pub struct Prompt {
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct PromptCollection(Vec<Prompt>);
+
+impl PromptCollection {
+    pub fn to_vec(&self) -> Vec<Prompt> {
+        self.0.clone()
+    }
+}
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum InputType {
