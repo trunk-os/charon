@@ -40,12 +40,15 @@ impl GlobalRegistry {
     }
 
     pub fn set(&self, global: Global) -> Result<()> {
+        let pb = self.root.join("variables");
+
+        std::fs::create_dir_all(&pb)?;
+
         Ok(serde_json::to_writer_pretty(
-            std::fs::OpenOptions::new().create(true).write(true).open(
-                self.root
-                    .join("variables")
-                    .join(&format!("{}.json", &global.name)),
-            )?,
+            std::fs::OpenOptions::new()
+                .create(true)
+                .write(true)
+                .open(pb.join(&format!("{}.json", &global.name)))?,
             &global,
         )?)
     }

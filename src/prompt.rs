@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
-const DELIMITER: char = '@';
+const DELIMITER: char = '?';
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct PromptParser(PromptCollection);
@@ -20,7 +20,7 @@ impl PromptParser {
             if inside && ch == DELIMITER {
                 inside = false;
                 if tmp.is_empty() {
-                    // @@, not a template
+                    // ??, not a template
                     continue;
                 }
 
@@ -49,8 +49,8 @@ impl PromptParser {
             if inside && ch == DELIMITER {
                 inside = false;
                 if tmp.is_empty() {
-                    // @@, not a template
-                    out.push('@');
+                    // ??, not a template
+                    out.push(DELIMITER);
                     continue;
                 }
 
@@ -77,9 +77,9 @@ impl PromptParser {
             }
         }
 
-        // if we were inside at the end of the string, don't swallow the @
+        // if we were inside at the end of the string, don't swallow the ?
         if inside {
-            out += &("@".to_string() + &tmp);
+            out += &(DELIMITER.to_string() + &tmp);
         }
 
         Ok(out)
@@ -185,10 +185,10 @@ mod tests {
     #[test]
     fn prompt_responding() {
         let parser = PromptParser(PromptCollection(PROMPTS.clone()));
-        assert!(parser.template("@greeting@".into(), vec![]).is_err());
+        assert!(parser.template("?greeting?".into(), vec![]).is_err());
         assert!(parser
             .template(
-                "@greeting@".into(),
+                "?greeting?".into(),
                 vec![PromptResponse {
                     template: "not-greeting".into(),
                     input: Input::Integer(20)
@@ -197,7 +197,7 @@ mod tests {
             .is_err());
         assert!(parser
             .template(
-                "@greeting@".into(),
+                "?greeting?".into(),
                 vec![PromptResponse {
                     template: "greeting".into(),
                     input: Input::String("hello, world!".into())
@@ -207,7 +207,7 @@ mod tests {
 
         assert!(parser
             .template(
-                "@greeting@".into(),
+                "?greeting?".into(),
                 vec![
                     PromptResponse {
                         template: "greeting".into(),
@@ -224,7 +224,7 @@ mod tests {
         assert_eq!(
             parser
                 .template(
-                    "@greeting@".into(),
+                    "?greeting?".into(),
                     vec![PromptResponse {
                         template: "greeting".into(),
                         input: Input::String("hello, world!".into())
@@ -237,7 +237,7 @@ mod tests {
         assert_eq!(
             parser
                 .template(
-                    "@greeting@ @shoesize@".into(),
+                    "?greeting? ?shoesize?".into(),
                     vec![
                         PromptResponse {
                             template: "greeting".into(),
@@ -253,26 +253,22 @@ mod tests {
             "hello, world! 20"
         );
 
-        assert!(parser.template("@greeting".into(), vec![]).is_ok());
+        assert!(parser.template("?greeting".into(), vec![]).is_ok());
         assert_eq!(
-            parser.template("@greeting".into(), vec![]).unwrap(),
-            "@greeting"
+            parser.template("?greeting".into(), vec![]).unwrap(),
+            "?greeting"
         );
-        assert!(parser.template("@".into(), vec![]).is_ok());
-        assert_eq!(parser.template("@".into(), vec![]).unwrap(), "@");
-        assert!(parser.template("@@".into(), vec![]).is_ok());
-        assert_eq!(parser.template("@@".into(), vec![]).unwrap(), "@");
+        assert!(parser.template("?".into(), vec![]).is_ok());
+        assert_eq!(parser.template("?".into(), vec![]).unwrap(), "?");
+        assert!(parser.template("??".into(), vec![]).is_ok());
+        assert_eq!(parser.template("??".into(), vec![]).unwrap(), "?");
         assert_eq!(
-            parser
-                .template("bgates@microsoft.com".into(), vec![])
-                .unwrap(),
-            "bgates@microsoft.com"
+            parser.template("why so serious?".into(), vec![]).unwrap(),
+            "why so serious?"
         );
         assert_eq!(
-            parser
-                .template("bgates@@microsoft.com".into(), vec![])
-                .unwrap(),
-            "bgates@microsoft.com"
+            parser.template("why so serious??".into(), vec![]).unwrap(),
+            "why so serious?"
         );
     }
 
@@ -282,7 +278,7 @@ mod tests {
 
         assert_eq!(
             *parser
-                .prompts("@greeting@".into())
+                .prompts("?greeting?".into())
                 .unwrap()
                 .iter()
                 .next()
@@ -292,7 +288,7 @@ mod tests {
 
         assert_eq!(
             *parser
-                .prompts("also a @greeting@ woo".into())
+                .prompts("also a ?greeting? woo".into())
                 .unwrap()
                 .iter()
                 .next()
@@ -303,19 +299,16 @@ mod tests {
         // items should appear in order
         assert_eq!(
             *parser
-                .prompts("here are three items: @file@ and @shoesize@ and @greeting@ woo".into())
+                .prompts("here are three items: ?file? and ?shoesize? and ?greeting? woo".into())
                 .unwrap(),
             vec![PROMPTS[2].clone(), PROMPTS[1].clone(), PROMPTS[0].clone()]
         );
 
-        assert_eq!(*parser.prompts("@@".into()).unwrap(), vec![]);
-        assert_eq!(*parser.prompts("@".into()).unwrap(), vec![]);
-        assert_eq!(*parser.prompts("@test".into()).unwrap(), vec![]);
-        assert_eq!(*parser.prompts("@file @shoesize".into()).unwrap(), vec![]);
-        assert_eq!(
-            *parser.prompts("bgates@microsoft.com".into()).unwrap(),
-            vec![]
-        );
+        assert_eq!(*parser.prompts("??".into()).unwrap(), vec![]);
+        assert_eq!(*parser.prompts("?".into()).unwrap(), vec![]);
+        assert_eq!(*parser.prompts("?test".into()).unwrap(), vec![]);
+        assert_eq!(*parser.prompts("?file ?shoesize".into()).unwrap(), vec![]);
+        assert_eq!(*parser.prompts("why so serious?".into()).unwrap(), vec![]);
     }
 
     #[test]
