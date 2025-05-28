@@ -160,7 +160,7 @@ mod tests {
     use super::{Package, PackageTitle};
 
     #[test]
-    fn test_io() {
+    fn io() {
         let dir = tempfile::tempdir().unwrap();
         let table = &[Package {
             title: PackageTitle {

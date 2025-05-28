@@ -157,7 +157,7 @@ mod tests {
     }
 
     #[test]
-    fn test_prompt_gathering() {
+    fn prompt_gathering() {
         let parser = PromptParser(PromptCollection(PROMPTS.clone()));
 
         assert_eq!(
@@ -195,7 +195,7 @@ mod tests {
     }
 
     #[test]
-    fn test_input() {
+    fn input_conversion() {
         assert_eq!("20", Input::Integer(20).to_string());
         assert_eq!("-20", Input::SignedInteger(-20).to_string());
         assert_eq!(
