@@ -6,11 +6,10 @@ use std::{
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Package {
     pub title: PackageTitle,
     pub description: String,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub dependencies: Vec<PackageTitle>,
     pub source: Source,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -35,7 +34,7 @@ impl Ord for Package {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct PackageTitle {
     pub name: String,
     pub version: String,
@@ -73,11 +72,15 @@ pub enum Source {
     Container(String),
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+impl Default for Source {
+    fn default() -> Self {
+        Source::Container("scratch".into())
+    }
+}
+
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Networking {
-    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub forward_ports: Vec<u16>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub expose_ports: Vec<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub internal_network: Option<String>,
@@ -85,37 +88,30 @@ pub struct Networking {
     pub hostname: Option<String>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Storage {
-    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub volumes: Vec<Volume>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Volume {
     pub name: String,
     pub size: u64,
-    #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub recreate: bool,
-    #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub private: bool,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct System {
     // --pid host
-    #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub host_pid: bool,
     // --net host
-    #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub host_net: bool,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub capabilities: Vec<String>,
-    #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub privileged: bool,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Resources {
     pub cpus: u8,
     pub memory: u32,
@@ -129,11 +125,14 @@ impl Package {
         )?)
     }
 
-    pub fn load(root: &Path, name: String, version: String) -> Result<Self> {
-        let pb = PathBuf::from_str(root.as_os_str().try_into()?)?.join("packages");
-        let name = pb.join(name).join(&format!("{}.json", version));
+    pub fn load(root: &Path, name: &str, version: &str) -> Result<Self> {
+        let pb = PathBuf::from_str(root.as_os_str().try_into()?)?
+            .join("packages")
+            .join(name);
+        let name = pb.join(&format!("{}.json", version));
+        eprintln!("{:?}", name);
         Ok(serde_json::from_reader(
-            std::fs::OpenOptions::new().open(name)?,
+            std::fs::OpenOptions::new().read(true).open(name)?,
         )?)
     }
 
@@ -143,22 +142,39 @@ impl Package {
             .join(&self.title.name);
 
         std::fs::create_dir_all(&pb)?;
+        eprintln!("{:?}", std::fs::read_dir(&pb)?);
 
         let name = pb.join(&format!("{}.json", self.title.version));
+        eprintln!("{:?}", name);
+        let f = std::fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .open(name)?;
 
-        Ok(serde_json::to_writer(
-            std::fs::OpenOptions::new()
-                .create_new(true)
-                .truncate(true)
-                .write(true)
-                .open(name)?,
-            self,
-        )?)
+        serde_json::to_writer(&f, self)?;
+        Ok(f.sync_all()?)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::{Package, PackageTitle};
+
     #[test]
-    fn test_io() {}
+    fn test_io() {
+        let dir = tempfile::tempdir().unwrap();
+        let table = &[Package {
+            title: PackageTitle {
+                name: "plex".into(),
+                version: "1.2.3".into(),
+            },
+            ..Default::default()
+        }];
+
+        for item in table {
+            assert!(item.write(dir.path()).is_ok());
+            let cmp = Package::load(dir.path(), &item.title.name, &item.title.version).unwrap();
+            assert_eq!(item.clone(), cmp);
+        }
+    }
 }
