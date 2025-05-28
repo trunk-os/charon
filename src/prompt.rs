@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
 const DELIMITER: char = '@';
@@ -43,11 +43,19 @@ impl PromptParser {
         for ch in s.chars() {
             if inside && ch == DELIMITER {
                 inside = false;
+                let mut matched = false;
                 for response in &responses {
                     if response.template == tmp {
-                        out += &response.to_string()
+                        out += &response.to_string();
+                        matched = true;
+                        break;
                     }
                 }
+
+                if !matched {
+                    return Err(anyhow!("No response matches prompt '{}'", tmp));
+                }
+
                 tmp = String::new();
             } else if ch == DELIMITER {
                 inside = true
@@ -56,6 +64,11 @@ impl PromptParser {
             } else {
                 out.push(ch)
             }
+        }
+
+        // if we were inside at the end of the string, don't swallow the @
+        if inside {
+            out += &("@".to_string() + &tmp);
         }
 
         Ok(out)
@@ -132,6 +145,8 @@ impl ToString for PromptResponse {
 
 #[cfg(test)]
 mod tests {
+    use crate::PromptResponse;
+
     use super::{Input, InputType, Prompt, PromptCollection, PromptParser};
     use lazy_static::lazy_static;
 
@@ -154,6 +169,87 @@ mod tests {
             },
         ]
         .to_vec();
+    }
+
+    #[test]
+    fn prompt_responding() {
+        let parser = PromptParser(PromptCollection(PROMPTS.clone()));
+        assert!(parser.template("@greeting@".into(), vec![]).is_err());
+        assert!(parser
+            .template(
+                "@greeting@".into(),
+                vec![PromptResponse {
+                    template: "not-greeting".into(),
+                    input: Input::Integer(20)
+                }]
+            )
+            .is_err());
+        assert!(parser
+            .template(
+                "@greeting@".into(),
+                vec![PromptResponse {
+                    template: "greeting".into(),
+                    input: Input::String("hello, world!".into())
+                }]
+            )
+            .is_ok());
+
+        assert!(parser
+            .template(
+                "@greeting@".into(),
+                vec![
+                    PromptResponse {
+                        template: "greeting".into(),
+                        input: Input::String("hello, world!".into())
+                    },
+                    PromptResponse {
+                        template: "not-greeting".into(),
+                        input: Input::String("hello, world!".into())
+                    },
+                ]
+            )
+            .is_ok());
+
+        assert_eq!(
+            parser
+                .template(
+                    "@greeting@".into(),
+                    vec![PromptResponse {
+                        template: "greeting".into(),
+                        input: Input::String("hello, world!".into())
+                    },]
+                )
+                .unwrap(),
+            "hello, world!"
+        );
+
+        assert_eq!(
+            parser
+                .template(
+                    "@greeting@ @shoesize@".into(),
+                    vec![
+                        PromptResponse {
+                            template: "greeting".into(),
+                            input: Input::String("hello, world!".into())
+                        },
+                        PromptResponse {
+                            template: "shoesize".into(),
+                            input: Input::Integer(20),
+                        }
+                    ]
+                )
+                .unwrap(),
+            "hello, world! 20"
+        );
+
+        assert!(parser.template("@greeting".into(), vec![]).is_ok());
+        assert_eq!(
+            parser.template("@greeting".into(), vec![]).unwrap(),
+            "@greeting"
+        );
+        assert!(parser.template("@".into(), vec![]).is_ok());
+        assert_eq!(parser.template("@".into(), vec![]).unwrap(), "@");
+        assert!(parser.template("@@".into(), vec![]).is_err());
     }
 
     #[test]
