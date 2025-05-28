@@ -138,12 +138,13 @@ impl Package {
     }
 
     pub fn write(&self, root: &Path) -> Result<()> {
-        let pb = PathBuf::from_str(root.as_os_str().try_into()?)?.join("packages");
+        let pb = PathBuf::from_str(root.as_os_str().try_into()?)?
+            .join("packages")
+            .join(&self.title.name);
+
         std::fs::create_dir_all(&pb)?;
 
-        let name = pb
-            .join(&self.title.name)
-            .join(&format!("{}.json", self.title.version));
+        let name = pb.join(&format!("{}.json", self.title.version));
 
         Ok(serde_json::to_writer(
             std::fs::OpenOptions::new()
