@@ -1,5 +1,6 @@
-#![allow(dead_code)]
+#![allow(dead_code, unused)]
 mod package;
+mod prompt;
 
-#[allow(unused)]
 pub use package::*;
+pub use prompt::*;
