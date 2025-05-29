@@ -1,10 +1,9 @@
-use crate::PromptCollection;
+use crate::{Global, GlobalRegistry, PromptCollection};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::{
-    path::{Path, PathBuf},
-    str::FromStr,
-};
+use std::path::{Path, PathBuf};
+
+const PACKAGE_SUBPATH: &str = "packages";
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Package {
@@ -123,41 +122,49 @@ pub struct Resources {
 impl Package {
     pub fn from_file(name: &Path) -> Result<Self> {
         Ok(serde_json::from_reader(
-            std::fs::OpenOptions::new().open(name)?,
-        )?)
-    }
-
-    pub fn load(root: &Path, name: &str, version: &str) -> Result<Self> {
-        let pb = PathBuf::from_str(root.as_os_str().try_into()?)?
-            .join("packages")
-            .join(name);
-        let name = pb.join(&format!("{}.json", version));
-        Ok(serde_json::from_reader(
             std::fs::OpenOptions::new().read(true).open(name)?,
         )?)
     }
 
-    pub fn write(&self, root: &Path) -> Result<()> {
-        let pb = PathBuf::from_str(root.as_os_str().try_into()?)?
-            .join("packages")
-            .join(&self.title.name);
+    pub fn globals(&self, root: &PathBuf) -> Result<Global> {
+        let registry = GlobalRegistry { root: root.clone() };
 
+        registry.get(&self.title.name)
+    }
+}
+
+pub struct Registry {
+    root: PathBuf,
+}
+
+impl Registry {
+    pub fn load(&self, name: &str, version: &str) -> Result<Package> {
+        let pb = self.root.join(PACKAGE_SUBPATH).join(name);
+        Ok(Package::from_file(&pb.join(&format!("{}.json", version)))?)
+    }
+
+    pub fn write(&self, package: &Package) -> Result<()> {
+        let pb = self.root.join(PACKAGE_SUBPATH).join(&package.title.name);
         std::fs::create_dir_all(&pb)?;
 
-        let name = pb.join(&format!("{}.json", self.title.version));
+        let name = pb.join(&format!("{}.json", package.title.version));
         let f = std::fs::OpenOptions::new()
             .create(true)
             .write(true)
             .open(name)?;
 
-        serde_json::to_writer_pretty(&f, self)?;
+        serde_json::to_writer_pretty(&f, &package)?;
         Ok(f.sync_all()?)
+    }
+
+    pub fn globals(&self, package: &Package) -> Result<Global> {
+        package.globals(&self.root)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Package, PackageTitle};
+    use crate::{Global, GlobalRegistry, Package, PackageTitle, Registry, Variables};
 
     #[test]
     fn io() {
@@ -170,10 +177,53 @@ mod tests {
             ..Default::default()
         }];
 
+        let pr = Registry {
+            root: dir.path().to_path_buf(),
+        };
+
         for item in table {
-            assert!(item.write(dir.path()).is_ok());
-            let cmp = Package::load(dir.path(), &item.title.name, &item.title.version).unwrap();
+            assert!(pr.write(item).is_ok());
+            let cmp = pr.load(&item.title.name, &item.title.version).unwrap();
             assert_eq!(item.clone(), cmp);
         }
+    }
+
+    #[test]
+    fn globals() {
+        let dir = tempfile::tempdir().unwrap();
+        let packages = &[Package {
+            title: PackageTitle {
+                name: "plex".into(),
+                version: "1.2.3".into(),
+            },
+            ..Default::default()
+        }];
+
+        let pr = Registry {
+            root: dir.path().to_path_buf(),
+        };
+
+        for item in packages {
+            assert!(pr.write(item).is_ok());
+        }
+
+        let mut variables = Variables::default();
+        variables.insert("foo".into(), "bar".into());
+        variables.insert("baz".into(), "quux".into());
+
+        let globals = &[Global {
+            name: "plex".into(),
+            variables: variables.clone(),
+        }];
+
+        let gr = GlobalRegistry {
+            root: dir.path().to_path_buf(),
+        };
+
+        for item in globals {
+            assert!(gr.set(item).is_ok());
+        }
+
+        assert_eq!(pr.globals(&packages[0]).unwrap(), globals[0]);
     }
 }
