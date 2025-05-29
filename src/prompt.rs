@@ -114,6 +114,9 @@ pub enum InputType {
     Name,
     #[serde(rename = "path")]
     Path,
+    #[serde(rename = "boolean")]
+    Boolean,
+    List,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -130,6 +133,9 @@ pub enum Input {
     SignedInteger(i64),
     #[serde(rename = "string")]
     String(String),
+    #[serde(rename = "boolean")]
+    Boolean(bool),
+    List(Vec<Input>),
 }
 
 impl ToString for Input {
@@ -138,6 +144,15 @@ impl ToString for Input {
             Input::Integer(x) => x.to_string(),
             Input::SignedInteger(x) => x.to_string(),
             Input::String(x) => x.to_string(),
+            Input::Boolean(x) => x.to_string(),
+            Input::List(x) => format!(
+                "[{}]",
+                x.iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<String>>()
+                    .join(", ")
+                    .to_string()
+            ),
         }
     }
 }
