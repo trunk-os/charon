@@ -44,9 +44,8 @@ pub struct PackageTitle {
 impl PartialOrd for PackageTitle {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         match self.name.partial_cmp(&other.name) {
-            Some(std::cmp::Ordering::Equal) => self.version.partial_cmp(&other.version),
+            Some(std::cmp::Ordering::Equal) | None => self.version.partial_cmp(&other.version),
             Some(ord) => Some(ord),
-            None => self.version.partial_cmp(&other.version),
         }
     }
 }
