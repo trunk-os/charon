@@ -147,14 +147,18 @@ impl Registry {
         let pb = self.root.join(PACKAGE_SUBPATH).join(&package.title.name);
         std::fs::create_dir_all(&pb)?;
 
-        let name = pb.join(&format!("{}.json", package.title.version));
+        let name = pb.join(&format!("{}.json.tmp", package.title.version));
         let f = std::fs::OpenOptions::new()
             .create(true)
             .write(true)
-            .open(name)?;
+            .open(&name)?;
 
         serde_json::to_writer_pretty(&f, &package)?;
-        Ok(f.sync_all()?)
+
+        Ok(std::fs::rename(
+            &name,
+            &pb.join(&format!("{}.json", package.title.version)),
+        )?)
     }
 
     pub fn globals(&self, package: &Package) -> Result<Global> {

@@ -49,13 +49,18 @@ impl GlobalRegistry {
         let pb = self.root.join(GLOBAL_SUBPATH);
 
         std::fs::create_dir_all(&pb)?;
-
-        Ok(serde_json::to_writer_pretty(
+        let name = pb.join(&format!("{}.json.tmp", &global.name));
+        serde_json::to_writer_pretty(
             std::fs::OpenOptions::new()
                 .create(true)
                 .write(true)
-                .open(pb.join(&format!("{}.json", &global.name)))?,
+                .open(&name)?,
             &global,
+        )?;
+
+        Ok(std::fs::rename(
+            &name,
+            &pb.join(&format!("{}.json", &global.name)),
         )?)
     }
 }
