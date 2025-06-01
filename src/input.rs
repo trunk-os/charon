@@ -1,27 +1,41 @@
+use crate::{PromptCollection, PromptParser, PromptResponse};
+use serde::{de::Visitor, Deserialize, Serialize};
 use std::str::FromStr;
 
-use serde::{de::Visitor, Deserialize, Serialize};
+#[derive(Debug, Clone, Eq, Default, PartialEq, Serialize, Deserialize)]
+pub struct TemplatedInput<T> {
+    input: String,
+    marker: std::marker::PhantomData<T>,
+}
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub struct TemplatedInput<T>(pub T);
-
-impl<T> FromStr for TemplatedInput<T>
+impl<T> TemplatedInput<T>
 where
     T: FromStr,
-    T::Err: Into<anyhow::Error>,
+    T::Err: Send + Sync + std::error::Error + 'static,
 {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(TemplatedInput(s.parse().map_err(Into::into)?))
+    pub fn output(
+        &self,
+        prompts: PromptCollection,
+        responses: Vec<PromptResponse>,
+    ) -> Result<T, anyhow::Error> {
+        let parser = PromptParser(prompts);
+        Ok(parser.template(self.input.clone(), responses)?.parse()?)
     }
 }
 
-impl<'de, T> Visitor<'de> for TemplatedInput<T>
-where
-    T: FromStr,
-{
-    type Value = T;
+impl<T> FromStr for TemplatedInput<T> {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self {
+            input: s.to_string(),
+            marker: Default::default(),
+        })
+    }
+}
+
+impl<'de, T> Visitor<'de> for TemplatedInput<T> {
+    type Value = TemplatedInput<T>;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
         let need = match std::any::type_name::<T>() {
@@ -38,8 +52,10 @@ where
     where
         E: serde::de::Error,
     {
-        Ok(v.parse()
-            .map_err(|_| serde::de::Error::invalid_value(serde::de::Unexpected::Str(v), &self))?)
+        Ok(Self {
+            input: v.to_string(),
+            marker: Default::default(),
+        })
     }
 }
 

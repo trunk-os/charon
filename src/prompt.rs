@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 
 const DELIMITER: char = '?';
 
-#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
-pub struct PromptParser(PromptCollection);
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub struct PromptParser(pub PromptCollection);
 
 impl PromptParser {
     pub fn collection(&self) -> &PromptCollection {
@@ -94,7 +94,7 @@ pub struct Prompt {
     pub input_type: InputType,
 }
 
-#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct PromptCollection(Vec<Prompt>);
 
 impl PromptCollection {
