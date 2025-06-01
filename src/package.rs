@@ -1,4 +1,4 @@
-use crate::{Global, GlobalRegistry, PromptCollection};
+use crate::{Global, GlobalRegistry, PromptCollection, TemplatedInput};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -62,25 +62,25 @@ impl Ord for PackageTitle {
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Source {
     #[serde(rename = "http")]
-    HTTP(String),
+    HTTP(TemplatedInput<String>),
     #[serde(rename = "container")]
-    Container(String),
+    Container(TemplatedInput<String>),
 }
 
 impl Default for Source {
     fn default() -> Self {
-        Source::Container("scratch".into())
+        Source::Container("scratch".parse().unwrap())
     }
 }
 
-#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Networking {
-    pub forward_ports: Vec<u16>,
-    pub expose_ports: Vec<u16>,
+    pub forward_ports: TemplatedInput<Vec<u16>>,
+    pub expose_ports: TemplatedInput<Vec<u16>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub internal_network: Option<String>,
+    pub internal_network: Option<TemplatedInput<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub hostname: Option<String>,
+    pub hostname: Option<TemplatedInput<String>>,
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -88,28 +88,28 @@ pub struct Storage {
     pub volumes: Vec<Volume>,
 }
 
-#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Volume {
-    pub name: String,
-    pub size: u64,
-    pub recreate: bool,
-    pub private: bool,
+    pub name: TemplatedInput<String>,
+    pub size: TemplatedInput<u64>,
+    pub recreate: TemplatedInput<bool>,
+    pub private: TemplatedInput<bool>,
 }
 
-#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct System {
     // --pid host
-    pub host_pid: bool,
+    pub host_pid: TemplatedInput<bool>,
     // --net host
-    pub host_net: bool,
-    pub capabilities: Vec<String>,
-    pub privileged: bool,
+    pub host_net: TemplatedInput<bool>,
+    pub capabilities: TemplatedInput<Vec<String>>,
+    pub privileged: TemplatedInput<bool>,
 }
 
-#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Resources {
-    pub cpus: u8,
-    pub memory: u32,
+    pub cpus: TemplatedInput<u64>,
+    pub memory: TemplatedInput<u64>,
     // probably something to bring in PCI devices to appease the crypto folks
 }
 
