@@ -2,11 +2,65 @@ use crate::{PromptCollection, PromptParser, Responses};
 use serde::{de::Visitor, Deserialize, Serialize};
 use std::str::FromStr;
 
-#[derive(Debug, Clone, Eq, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct TemplatedInput<T> {
     input: String,
     #[serde(skip)]
     marker: std::marker::PhantomData<T>,
+}
+
+impl Default for TemplatedInput<u16> {
+    fn default() -> Self {
+        TemplatedInput {
+            input: "0".into(),
+            marker: Default::default(),
+        }
+    }
+}
+
+impl Default for TemplatedInput<u64> {
+    fn default() -> Self {
+        TemplatedInput {
+            input: "0".into(),
+            marker: Default::default(),
+        }
+    }
+}
+
+impl Default for TemplatedInput<i64> {
+    fn default() -> Self {
+        TemplatedInput {
+            input: "0".into(),
+            marker: Default::default(),
+        }
+    }
+}
+
+impl Default for TemplatedInput<bool> {
+    fn default() -> Self {
+        TemplatedInput {
+            input: "false".into(),
+            marker: Default::default(),
+        }
+    }
+}
+
+impl Default for TemplatedInput<String> {
+    fn default() -> Self {
+        TemplatedInput {
+            input: "".into(),
+            marker: Default::default(),
+        }
+    }
+}
+
+impl Default for TemplatedInput<&str> {
+    fn default() -> Self {
+        TemplatedInput {
+            input: "".into(),
+            marker: Default::default(),
+        }
+    }
 }
 
 impl<T> TemplatedInput<T>
@@ -36,7 +90,7 @@ where
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Self {
             input: s.to_string(),
-            ..Default::default()
+            marker: Default::default(),
         })
     }
 }
@@ -64,7 +118,7 @@ where
     {
         Ok(Self {
             input: v.to_string(),
-            ..Default::default()
+            marker: Default::default(),
         })
     }
 }

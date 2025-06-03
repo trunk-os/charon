@@ -415,7 +415,9 @@ impl Registry {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Global, GlobalRegistry, PackageTitle, Registry, SourcePackage, Variables};
+    use crate::{
+        CompiledPackage, Global, GlobalRegistry, PackageTitle, Registry, SourcePackage, Variables,
+    };
 
     #[test]
     fn io() {
@@ -478,5 +480,57 @@ mod tests {
         }
 
         assert_eq!(pr.globals(&packages[0]).unwrap(), globals[0]);
+    }
+
+    #[test]
+    fn compile() {
+        let dir = tempfile::tempdir().unwrap();
+        let packages = &[SourcePackage {
+            title: PackageTitle {
+                name: "plex".into(),
+                version: "1.2.3".into(),
+            },
+            root: Some(dir.path().to_path_buf()),
+            ..Default::default()
+        }];
+
+        let pr = Registry {
+            root: dir.path().to_path_buf(),
+        };
+
+        for item in packages {
+            pr.write(item).unwrap();
+        }
+
+        let mut variables = Variables::default();
+        variables.insert("foo".into(), "bar".into());
+        variables.insert("baz".into(), "quux".into());
+
+        let globals = &[Global {
+            name: "plex".into(),
+            variables: variables.clone(),
+        }];
+
+        let gr = GlobalRegistry {
+            root: dir.path().to_path_buf(),
+        };
+
+        for item in globals {
+            assert!(gr.set(item).is_ok());
+        }
+
+        let pkg = pr.load("plex", "1.2.3").unwrap();
+        let out = pkg.compile(&[]).unwrap();
+
+        assert_eq!(
+            out,
+            CompiledPackage {
+                title: PackageTitle {
+                    name: "plex".into(),
+                    version: "1.2.3".into(),
+                },
+                ..Default::default()
+            }
+        )
     }
 }
