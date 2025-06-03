@@ -6,11 +6,20 @@ use std::str::FromStr;
 // see package.rs for some important understanding about this package that I won't repeat here
 //
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
 pub struct TemplatedInput<T> {
     input: String,
     #[serde(skip)]
     marker: std::marker::PhantomData<T>,
+}
+
+impl<T> Serialize for TemplatedInput<T> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        serializer.serialize_str(&self.input)
+    }
 }
 
 impl Default for TemplatedInput<u16> {

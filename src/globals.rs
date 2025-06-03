@@ -81,6 +81,10 @@ pub struct GlobalRegistry {
 }
 
 impl GlobalRegistry {
+    pub fn new(root: PathBuf) -> Self {
+        Self { root }
+    }
+
     pub fn get(&self, name: &str) -> Result<Global> {
         Ok(serde_json::from_reader(
             std::fs::OpenOptions::new().read(true).open(

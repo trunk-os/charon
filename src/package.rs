@@ -16,6 +16,7 @@ const PACKAGE_SUBPATH: &str = "packages";
 pub struct SourcePackage {
     pub title: PackageTitle,
     pub description: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub dependencies: Vec<PackageTitle>,
     pub source: Source,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -392,6 +393,10 @@ pub struct Registry {
 }
 
 impl Registry {
+    pub fn new(root: PathBuf) -> Self {
+        Self { root }
+    }
+
     pub fn load(&self, name: &str, version: &str) -> Result<SourcePackage> {
         Ok(SourcePackage::from_file(&self.root, name, version)?)
     }
