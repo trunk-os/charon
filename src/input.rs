@@ -2,6 +2,10 @@ use crate::{Global, PromptCollection, PromptParser, Responses};
 use serde::{de::Visitor, Deserialize, Serialize};
 use std::str::FromStr;
 
+//
+// see package.rs for some important understanding about this package that I won't repeat here
+//
+
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct TemplatedInput<T> {
     input: String,
