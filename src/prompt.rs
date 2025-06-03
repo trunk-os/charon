@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 
 const DELIMITER: char = '?';
 
+pub type Responses<'a> = &'a [PromptResponse];
+
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct PromptParser(pub PromptCollection);
 
@@ -41,7 +43,7 @@ impl PromptParser {
         Ok(v)
     }
 
-    pub fn template(&self, s: String, responses: &[PromptResponse]) -> Result<String> {
+    pub fn template<'a>(&self, s: String, responses: Responses<'a>) -> Result<String> {
         let mut tmp = String::new();
         let mut inside = false;
         let mut out = String::new();

@@ -1,4 +1,4 @@
-use crate::{PromptCollection, PromptParser, PromptResponse};
+use crate::{PromptCollection, PromptParser, Responses};
 use serde::{de::Visitor, Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -14,10 +14,10 @@ where
     T: FromStr,
     T::Err: Send + Sync + std::error::Error + 'static,
 {
-    pub fn output(
+    pub fn output<'a>(
         &self,
-        prompts: PromptCollection,
-        responses: Vec<PromptResponse>,
+        prompts: &PromptCollection,
+        responses: Responses<'a>,
     ) -> Result<T, anyhow::Error>
     where
         T: Serialize,

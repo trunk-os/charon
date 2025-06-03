@@ -1,4 +1,4 @@
-use crate::{Global, GlobalRegistry, PromptCollection, TemplatedInput};
+use crate::{Global, GlobalRegistry, PromptCollection, Responses, TemplatedInput};
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -66,18 +66,36 @@ impl SourcePackage {
         registry.get(&self.title.name)
     }
 
-    // pub fn compile(&self) -> CompiledPackage {
-    // CompiledPackage {
-    //     title: self.title.clone(),
-    //     description: self.description.clone(),
-    //     dependencies: self.dependencies.clone(),
-    //     source: (),
-    //     networking: (),
-    //     storage: (),
-    //     system: (),
-    //     resources: (),
-    // }
-    // }
+    pub fn compile<'a>(&self, responses: Responses<'a>) -> Result<CompiledPackage> {
+        let globals = self.globals()?;
+        let prompts = self.prompts.clone().unwrap_or_default();
+        Ok(CompiledPackage {
+            title: self.title.clone(),
+            description: self.description.clone(),
+            dependencies: self.dependencies.clone(),
+            source: self.source.compile(&globals, &prompts, responses)?,
+            networking: self
+                .networking
+                .clone()
+                .unwrap_or_default()
+                .compile(&globals, &prompts, responses)?,
+            storage: self
+                .storage
+                .clone()
+                .unwrap_or_default()
+                .compile(&globals, &prompts, responses)?,
+            system: self
+                .system
+                .clone()
+                .unwrap_or_default()
+                .compile(&globals, &prompts, responses)?,
+            resources: self
+                .resources
+                .clone()
+                .unwrap_or_default()
+                .compile(&globals, &prompts, responses)?,
+        })
+    }
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -133,6 +151,20 @@ impl Default for Source {
     }
 }
 
+impl Source {
+    pub fn compile<'a>(
+        &self,
+        _globals: &Global,
+        prompts: &PromptCollection,
+        responses: Responses<'a>,
+    ) -> Result<CompiledSource> {
+        Ok(match self {
+            Self::HTTP(x) => CompiledSource::HTTP(x.output(prompts, responses)?),
+            Self::Container(x) => CompiledSource::Container(x.output(prompts, responses)?),
+        })
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum CompiledSource {
     #[serde(rename = "http")]
@@ -148,7 +180,7 @@ impl Default for CompiledSource {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Networking {
     pub forward_ports: Vec<TemplatedInput<u16>>,
     pub expose_ports: Vec<TemplatedInput<u16>>,
@@ -156,6 +188,58 @@ pub struct Networking {
     pub internal_network: Option<TemplatedInput<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hostname: Option<TemplatedInput<String>>,
+}
+
+impl Networking {
+    pub fn compile<'a>(
+        &self,
+        _globals: &Global,
+        prompts: &PromptCollection,
+        responses: Responses<'a>,
+    ) -> Result<CompiledNetworking> {
+        let mut forward_ports = Vec::new();
+        for port in &self.forward_ports {
+            forward_ports.push(port.output(prompts, responses)?);
+        }
+
+        let mut expose_ports = Vec::new();
+        for port in &self.expose_ports {
+            expose_ports.push(port.output(prompts, responses)?);
+        }
+
+        let internal_network = if let Some(internal_network) = self
+            .internal_network
+            .as_ref()
+            .map(|x| x.output(&prompts, responses))
+        {
+            match internal_network {
+                Ok(x) => Some(x),
+                Err(e) => return Err(e),
+            }
+        } else {
+            None
+        };
+
+        let hostname = if let Some(hostname) = self
+            .hostname
+            .as_ref()
+            .map(|x| x.output(&prompts, responses))
+        {
+            match hostname {
+                Ok(x) => Some(x),
+                Err(e) => return Err(e),
+            }
+        } else {
+            None
+        };
+
+        Ok(CompiledNetworking {
+            forward_ports,
+            expose_ports,
+            internal_network,
+            hostname,
+        })
+    }
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -173,17 +257,49 @@ pub struct Storage {
     pub volumes: Vec<Volume>,
 }
 
+impl Storage {
+    pub fn compile<'a>(
+        &self,
+        globals: &Global,
+        prompts: &PromptCollection,
+        responses: Responses<'a>,
+    ) -> Result<CompiledStorage> {
+        let mut v = Vec::new();
+        for volume in &self.volumes {
+            v.push(volume.compile(globals, prompts, responses)?);
+        }
+
+        Ok(CompiledStorage { volumes: v })
+    }
+}
+
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct CompiledStorage {
     pub volumes: Vec<CompiledVolume>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Volume {
     pub name: TemplatedInput<String>,
     pub size: TemplatedInput<u64>,
     pub recreate: TemplatedInput<bool>,
     pub private: TemplatedInput<bool>,
+}
+
+impl Volume {
+    pub fn compile<'a>(
+        &self,
+        _globals: &Global,
+        prompts: &PromptCollection,
+        responses: Responses<'a>,
+    ) -> Result<CompiledVolume> {
+        Ok(CompiledVolume {
+            name: self.name.output(prompts, responses)?,
+            size: self.size.output(prompts, responses)?,
+            recreate: self.recreate.output(prompts, responses)?,
+            private: self.private.output(prompts, responses)?,
+        })
+    }
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -194,7 +310,7 @@ pub struct CompiledVolume {
     pub private: bool,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct System {
     // --pid host
     pub host_pid: TemplatedInput<bool>,
@@ -202,6 +318,28 @@ pub struct System {
     pub host_net: TemplatedInput<bool>,
     pub capabilities: Vec<TemplatedInput<String>>,
     pub privileged: TemplatedInput<bool>,
+}
+
+impl System {
+    pub fn compile<'a>(
+        &self,
+        _globals: &Global,
+        prompts: &PromptCollection,
+        responses: Responses<'a>,
+    ) -> Result<CompiledSystem> {
+        let mut capabilities = Vec::new();
+
+        for cap in &self.capabilities {
+            capabilities.push(cap.output(prompts, responses)?);
+        }
+
+        Ok(CompiledSystem {
+            host_pid: self.host_pid.output(prompts, responses)?,
+            host_net: self.host_net.output(prompts, responses)?,
+            capabilities,
+            privileged: self.privileged.output(prompts, responses)?,
+        })
+    }
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -214,11 +352,25 @@ pub struct CompiledSystem {
     pub privileged: bool,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Resources {
     pub cpus: TemplatedInput<u64>,
     pub memory: TemplatedInput<u64>,
     // probably something to bring in PCI devices to appease the crypto folks
+}
+
+impl Resources {
+    pub fn compile<'a>(
+        &self,
+        _globals: &Global,
+        prompts: &PromptCollection,
+        responses: Responses<'a>,
+    ) -> Result<CompiledResources> {
+        Ok(CompiledResources {
+            cpus: self.cpus.output(prompts, responses)?,
+            memory: self.memory.output(prompts, responses)?,
+        })
+    }
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
