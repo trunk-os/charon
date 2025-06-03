@@ -18,7 +18,7 @@ impl Global {
         self.variables.get(name).cloned()
     }
 
-    pub fn template(&self, s: String) -> Result<String> {
+    pub fn template(&self, s: &str) -> Result<String> {
         let mut tmp = String::new();
         let mut inside = false;
         let mut out = String::new();

@@ -154,13 +154,13 @@ impl Default for Source {
 impl Source {
     pub fn compile<'a>(
         &self,
-        _globals: &Global,
+        globals: &Global,
         prompts: &PromptCollection,
         responses: Responses<'a>,
     ) -> Result<CompiledSource> {
         Ok(match self {
-            Self::HTTP(x) => CompiledSource::HTTP(x.output(prompts, responses)?),
-            Self::Container(x) => CompiledSource::Container(x.output(prompts, responses)?),
+            Self::HTTP(x) => CompiledSource::HTTP(x.output(globals, prompts, responses)?),
+            Self::Container(x) => CompiledSource::Container(x.output(globals, prompts, responses)?),
         })
     }
 }
@@ -193,24 +193,24 @@ pub struct Networking {
 impl Networking {
     pub fn compile<'a>(
         &self,
-        _globals: &Global,
+        globals: &Global,
         prompts: &PromptCollection,
         responses: Responses<'a>,
     ) -> Result<CompiledNetworking> {
         let mut forward_ports = Vec::new();
         for port in &self.forward_ports {
-            forward_ports.push(port.output(prompts, responses)?);
+            forward_ports.push(port.output(globals, prompts, responses)?);
         }
 
         let mut expose_ports = Vec::new();
         for port in &self.expose_ports {
-            expose_ports.push(port.output(prompts, responses)?);
+            expose_ports.push(port.output(globals, prompts, responses)?);
         }
 
         let internal_network = if let Some(internal_network) = self
             .internal_network
             .as_ref()
-            .map(|x| x.output(&prompts, responses))
+            .map(|x| x.output(globals, prompts, responses))
         {
             match internal_network {
                 Ok(x) => Some(x),
@@ -223,7 +223,7 @@ impl Networking {
         let hostname = if let Some(hostname) = self
             .hostname
             .as_ref()
-            .map(|x| x.output(&prompts, responses))
+            .map(|x| x.output(globals, prompts, responses))
         {
             match hostname {
                 Ok(x) => Some(x),
@@ -289,15 +289,15 @@ pub struct Volume {
 impl Volume {
     pub fn compile<'a>(
         &self,
-        _globals: &Global,
+        globals: &Global,
         prompts: &PromptCollection,
         responses: Responses<'a>,
     ) -> Result<CompiledVolume> {
         Ok(CompiledVolume {
-            name: self.name.output(prompts, responses)?,
-            size: self.size.output(prompts, responses)?,
-            recreate: self.recreate.output(prompts, responses)?,
-            private: self.private.output(prompts, responses)?,
+            name: self.name.output(globals, prompts, responses)?,
+            size: self.size.output(globals, prompts, responses)?,
+            recreate: self.recreate.output(globals, prompts, responses)?,
+            private: self.private.output(globals, prompts, responses)?,
         })
     }
 }
@@ -323,21 +323,21 @@ pub struct System {
 impl System {
     pub fn compile<'a>(
         &self,
-        _globals: &Global,
+        globals: &Global,
         prompts: &PromptCollection,
         responses: Responses<'a>,
     ) -> Result<CompiledSystem> {
         let mut capabilities = Vec::new();
 
         for cap in &self.capabilities {
-            capabilities.push(cap.output(prompts, responses)?);
+            capabilities.push(cap.output(globals, prompts, responses)?);
         }
 
         Ok(CompiledSystem {
-            host_pid: self.host_pid.output(prompts, responses)?,
-            host_net: self.host_net.output(prompts, responses)?,
+            host_pid: self.host_pid.output(globals, prompts, responses)?,
+            host_net: self.host_net.output(globals, prompts, responses)?,
             capabilities,
-            privileged: self.privileged.output(prompts, responses)?,
+            privileged: self.privileged.output(globals, prompts, responses)?,
         })
     }
 }
@@ -362,13 +362,13 @@ pub struct Resources {
 impl Resources {
     pub fn compile<'a>(
         &self,
-        _globals: &Global,
+        globals: &Global,
         prompts: &PromptCollection,
         responses: Responses<'a>,
     ) -> Result<CompiledResources> {
         Ok(CompiledResources {
-            cpus: self.cpus.output(prompts, responses)?,
-            memory: self.memory.output(prompts, responses)?,
+            cpus: self.cpus.output(globals, prompts, responses)?,
+            memory: self.memory.output(globals, prompts, responses)?,
         })
     }
 }

@@ -1,4 +1,4 @@
-use crate::{PromptCollection, PromptParser, Responses};
+use crate::{Global, PromptCollection, PromptParser, Responses};
 use serde::{de::Visitor, Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -70,6 +70,7 @@ where
 {
     pub fn output<'a>(
         &self,
+        globals: &Global,
         prompts: &PromptCollection,
         responses: Responses<'a>,
     ) -> Result<T, anyhow::Error>
@@ -77,7 +78,9 @@ where
         T: Serialize,
     {
         let parser = PromptParser(prompts.clone());
-        Ok(parser.template(self.input.clone(), &responses)?.parse()?)
+        Ok(parser
+            .template(globals.template(&self.input)?, &responses)?
+            .parse()?)
     }
 }
 
