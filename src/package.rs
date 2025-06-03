@@ -24,12 +24,14 @@ pub struct Package {
 }
 
 impl PartialOrd for Package {
+    #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.title.partial_cmp(&other.title)
     }
 }
 
 impl Ord for Package {
+    #[inline]
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.title.cmp(&other.title)
     }
@@ -42,6 +44,7 @@ pub struct PackageTitle {
 }
 
 impl PartialOrd for PackageTitle {
+    #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         match self.name.partial_cmp(&other.name) {
             Some(std::cmp::Ordering::Equal) | None => self.version.partial_cmp(&other.version),
@@ -51,6 +54,7 @@ impl PartialOrd for PackageTitle {
 }
 
 impl Ord for PackageTitle {
+    #[inline]
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         match self.name.cmp(&other.name) {
             std::cmp::Ordering::Equal => self.version.cmp(&other.version),
@@ -68,6 +72,7 @@ pub enum Source {
 }
 
 impl Default for Source {
+    #[inline]
     fn default() -> Self {
         Source::Container("scratch".parse().unwrap())
     }
@@ -120,6 +125,7 @@ impl Package {
         )?)
     }
 
+    #[inline]
     pub fn globals(&self, root: &PathBuf) -> Result<Global> {
         let registry = GlobalRegistry { root: root.clone() };
 
@@ -155,6 +161,7 @@ impl Registry {
         )?)
     }
 
+    #[inline]
     pub fn globals(&self, package: &Package) -> Result<Global> {
         package.globals(&self.root)
     }
@@ -202,7 +209,7 @@ mod tests {
         };
 
         for item in packages {
-            assert!(pr.write(item).is_ok());
+            pr.write(item).unwrap();
         }
 
         let mut variables = Variables::default();

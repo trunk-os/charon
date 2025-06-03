@@ -2,11 +2,14 @@ use crate::{PromptCollection, PromptParser, PromptResponse};
 use serde::{de::Visitor, Deserialize, Serialize};
 use std::str::FromStr;
 
-#[derive(Debug, Clone, Eq, Default, PartialEq, Deserialize)]
+#[derive(Debug, Clone, Eq, Default, PartialEq, Serialize, Deserialize)]
 pub struct TemplatedInput<T> {
     input: String,
+    #[serde(skip)]
     prompts: PromptCollection,
+    #[serde(skip)]
     responses: Vec<PromptResponse>,
+    #[serde(skip)]
     marker: std::marker::PhantomData<T>,
 }
 
@@ -49,7 +52,7 @@ where
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
         let need = match std::any::type_name::<T>() {
             "std::str" | "std::str::String" => "string",
-            "std::u64" => "unsigned integer",
+            "std::u64" | "std::u16" => "unsigned integer",
             "std::i64" => "signed integer",
             "std::bool" => "boolean",
             _ => "unknown type",
@@ -65,67 +68,6 @@ where
             input: v.to_string(),
             ..Default::default()
         })
-    }
-}
-
-impl Serialize for TemplatedInput<u16> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::ser::Serializer,
-    {
-        Ok(serializer.serialize_u16(
-            self.output()
-                .map_err(|e| serde::ser::Error::custom(e.to_string()))?,
-        )?)
-    }
-}
-
-impl Serialize for TemplatedInput<bool> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::ser::Serializer,
-    {
-        Ok(serializer.serialize_bool(
-            self.output()
-                .map_err(|e| serde::ser::Error::custom(e.to_string()))?,
-        )?)
-    }
-}
-
-impl Serialize for TemplatedInput<u64> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::ser::Serializer,
-    {
-        Ok(serializer.serialize_u64(
-            self.output()
-                .map_err(|e| serde::ser::Error::custom(e.to_string()))?,
-        )?)
-    }
-}
-
-impl Serialize for TemplatedInput<i64> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::ser::Serializer,
-    {
-        Ok(serializer.serialize_i64(
-            self.output()
-                .map_err(|e| serde::ser::Error::custom(e.to_string()))?,
-        )?)
-    }
-}
-
-impl Serialize for TemplatedInput<String> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::ser::Serializer,
-    {
-        Ok(serializer.serialize_str(
-            &self
-                .output()
-                .map_err(|e| serde::ser::Error::custom(e.to_string()))?,
-        )?)
     }
 }
 

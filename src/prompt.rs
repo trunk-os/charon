@@ -145,12 +145,12 @@ mod tests {
 
     #[test]
     fn prompt_responding() {
-        let parser = PromptParser(&PromptCollection(PROMPTS.clone()));
-        assert!(parser.template("?greeting?".into(), vec![]).is_err());
+        let parser = PromptParser(PromptCollection(PROMPTS.clone()));
+        assert!(parser.template("?greeting?".into(), &[]).is_err());
         assert!(parser
             .template(
                 "?greeting?".into(),
-                vec![PromptResponse {
+                &[PromptResponse {
                     template: "not-greeting".into(),
                     input: Input::Integer(20)
                 }]
@@ -159,7 +159,7 @@ mod tests {
         assert!(parser
             .template(
                 "?greeting?".into(),
-                vec![PromptResponse {
+                &[PromptResponse {
                     template: "greeting".into(),
                     input: Input::String("hello, world!".into())
                 }]
@@ -169,7 +169,7 @@ mod tests {
         assert!(parser
             .template(
                 "?greeting?".into(),
-                vec![
+                &[
                     PromptResponse {
                         template: "greeting".into(),
                         input: Input::String("hello, world!".into())
@@ -186,7 +186,7 @@ mod tests {
             parser
                 .template(
                     "?greeting?".into(),
-                    vec![PromptResponse {
+                    &[PromptResponse {
                         template: "greeting".into(),
                         input: Input::String("hello, world!".into())
                     },]
@@ -199,7 +199,7 @@ mod tests {
             parser
                 .template(
                     "?greeting? ?shoesize?".into(),
-                    vec![
+                    &[
                         PromptResponse {
                             template: "greeting".into(),
                             input: Input::String("hello, world!".into())
@@ -214,28 +214,28 @@ mod tests {
             "hello, world! 20"
         );
 
-        assert!(parser.template("?greeting".into(), vec![]).is_ok());
+        assert!(parser.template("?greeting".into(), &[]).is_ok());
         assert_eq!(
-            parser.template("?greeting".into(), vec![]).unwrap(),
+            parser.template("?greeting".into(), &[]).unwrap(),
             "?greeting"
         );
-        assert!(parser.template("?".into(), vec![]).is_ok());
-        assert_eq!(parser.template("?".into(), vec![]).unwrap(), "?");
-        assert!(parser.template("??".into(), vec![]).is_ok());
-        assert_eq!(parser.template("??".into(), vec![]).unwrap(), "?");
+        assert!(parser.template("?".into(), &[]).is_ok());
+        assert_eq!(parser.template("?".into(), &[]).unwrap(), "?");
+        assert!(parser.template("??".into(), &[]).is_ok());
+        assert_eq!(parser.template("??".into(), &[]).unwrap(), "?");
         assert_eq!(
-            parser.template("why so serious?".into(), vec![]).unwrap(),
+            parser.template("why so serious?".into(), &[]).unwrap(),
             "why so serious?"
         );
         assert_eq!(
-            parser.template("why so serious??".into(), vec![]).unwrap(),
+            parser.template("why so serious??".into(), &[]).unwrap(),
             "why so serious?"
         );
     }
 
     #[test]
     fn prompt_gathering() {
-        let parser = PromptParser(&PromptCollection(PROMPTS.clone()));
+        let parser = PromptParser(PromptCollection(PROMPTS.clone()));
 
         assert_eq!(
             *parser
