@@ -37,6 +37,7 @@ impl Ord for SourcePackage {
     }
 }
 
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct CompiledPackage {
     pub title: PackageTitle,
     pub description: String,
@@ -114,7 +115,7 @@ pub struct Networking {
     pub hostname: Option<TemplatedInput<String>>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct CompiledNetworking {
     pub forward_ports: Vec<u16>,
     pub expose_ports: Vec<u16>,
@@ -142,7 +143,7 @@ pub struct Volume {
     pub private: TemplatedInput<bool>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct CompiledVolume {
     pub name: String,
     pub size: u64,
@@ -160,7 +161,7 @@ pub struct System {
     pub privileged: TemplatedInput<bool>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct CompiledSystem {
     // --pid host
     pub host_pid: bool,
@@ -177,7 +178,7 @@ pub struct Resources {
     // probably something to bring in PCI devices to appease the crypto folks
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct CompiledResources {
     pub cpus: u64,
     pub memory: u64,
