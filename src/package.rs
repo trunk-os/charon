@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 const PACKAGE_SUBPATH: &str = "packages";
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
-pub struct Package {
+pub struct SourcePackage {
     pub title: PackageTitle,
     pub description: String,
     pub dependencies: Vec<PackageTitle>,
@@ -23,18 +23,29 @@ pub struct Package {
     pub prompts: Option<PromptCollection>,
 }
 
-impl PartialOrd for Package {
+impl PartialOrd for SourcePackage {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         self.title.partial_cmp(&other.title)
     }
 }
 
-impl Ord for Package {
+impl Ord for SourcePackage {
     #[inline]
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.title.cmp(&other.title)
     }
+}
+
+pub struct CompiledPackage {
+    pub title: PackageTitle,
+    pub description: String,
+    pub dependencies: Vec<PackageTitle>,
+    pub source: CompiledSource,
+    pub networking: CompiledNetworking,
+    pub storage: CompiledStorage,
+    pub system: CompiledSystem,
+    pub resources: CompiledResources,
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -74,7 +85,22 @@ pub enum Source {
 impl Default for Source {
     #[inline]
     fn default() -> Self {
-        Source::Container("scratch".parse().unwrap())
+        Self::Container("scratch".parse().unwrap())
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub enum CompiledSource {
+    #[serde(rename = "http")]
+    HTTP(String),
+    #[serde(rename = "container")]
+    Container(String),
+}
+
+impl Default for CompiledSource {
+    #[inline]
+    fn default() -> Self {
+        Self::Container("scratch".parse().unwrap())
     }
 }
 
@@ -88,9 +114,24 @@ pub struct Networking {
     pub hostname: Option<TemplatedInput<String>>,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub struct CompiledNetworking {
+    pub forward_ports: Vec<u16>,
+    pub expose_ports: Vec<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub internal_network: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hostname: Option<String>,
+}
+
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Storage {
     pub volumes: Vec<Volume>,
+}
+
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub struct CompiledStorage {
+    pub volumes: Vec<CompiledVolume>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -99,6 +140,14 @@ pub struct Volume {
     pub size: TemplatedInput<u64>,
     pub recreate: TemplatedInput<bool>,
     pub private: TemplatedInput<bool>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub struct CompiledVolume {
+    pub name: String,
+    pub size: u64,
+    pub recreate: bool,
+    pub private: bool,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -112,13 +161,30 @@ pub struct System {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub struct CompiledSystem {
+    // --pid host
+    pub host_pid: bool,
+    // --net host
+    pub host_net: bool,
+    pub capabilities: Vec<String>,
+    pub privileged: bool,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Resources {
     pub cpus: TemplatedInput<u64>,
     pub memory: TemplatedInput<u64>,
     // probably something to bring in PCI devices to appease the crypto folks
 }
 
-impl Package {
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub struct CompiledResources {
+    pub cpus: u64,
+    pub memory: u64,
+    // probably something to bring in PCI devices to appease the crypto folks
+}
+
+impl SourcePackage {
     pub fn from_file(name: &Path) -> Result<Self> {
         Ok(serde_json::from_reader(
             std::fs::OpenOptions::new().read(true).open(name)?,
@@ -138,12 +204,14 @@ pub struct Registry {
 }
 
 impl Registry {
-    pub fn load(&self, name: &str, version: &str) -> Result<Package> {
+    pub fn load(&self, name: &str, version: &str) -> Result<SourcePackage> {
         let pb = self.root.join(PACKAGE_SUBPATH).join(name);
-        Ok(Package::from_file(&pb.join(&format!("{}.json", version)))?)
+        Ok(SourcePackage::from_file(
+            &pb.join(&format!("{}.json", version)),
+        )?)
     }
 
-    pub fn write(&self, package: &Package) -> Result<()> {
+    pub fn write(&self, package: &SourcePackage) -> Result<()> {
         let pb = self.root.join(PACKAGE_SUBPATH).join(&package.title.name);
         std::fs::create_dir_all(&pb)?;
 
@@ -162,19 +230,19 @@ impl Registry {
     }
 
     #[inline]
-    pub fn globals(&self, package: &Package) -> Result<Global> {
+    pub fn globals(&self, package: &SourcePackage) -> Result<Global> {
         package.globals(&self.root)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{Global, GlobalRegistry, Package, PackageTitle, Registry, Variables};
+    use crate::{Global, GlobalRegistry, PackageTitle, Registry, SourcePackage, Variables};
 
     #[test]
     fn io() {
         let dir = tempfile::tempdir().unwrap();
-        let table = &[Package {
+        let table = &[SourcePackage {
             title: PackageTitle {
                 name: "plex".into(),
                 version: "1.2.3".into(),
@@ -196,7 +264,7 @@ mod tests {
     #[test]
     fn globals() {
         let dir = tempfile::tempdir().unwrap();
-        let packages = &[Package {
+        let packages = &[SourcePackage {
             title: PackageTitle {
                 name: "plex".into(),
                 version: "1.2.3".into(),
