@@ -75,8 +75,8 @@ impl Default for Source {
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Networking {
-    pub forward_ports: TemplatedInput<Vec<u16>>,
-    pub expose_ports: TemplatedInput<Vec<u16>>,
+    pub forward_ports: Vec<TemplatedInput<u16>>,
+    pub expose_ports: Vec<TemplatedInput<u16>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub internal_network: Option<TemplatedInput<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -102,7 +102,7 @@ pub struct System {
     pub host_pid: TemplatedInput<bool>,
     // --net host
     pub host_net: TemplatedInput<bool>,
-    pub capabilities: TemplatedInput<Vec<String>>,
+    pub capabilities: Vec<TemplatedInput<String>>,
     pub privileged: TemplatedInput<bool>,
 }
 

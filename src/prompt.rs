@@ -8,8 +8,8 @@ const DELIMITER: char = '?';
 pub struct PromptParser(pub PromptCollection);
 
 impl PromptParser {
-    pub fn collection(&self) -> &PromptCollection {
-        &self.0
+    pub fn collection(&self) -> PromptCollection {
+        self.0.clone()
     }
 
     pub fn prompts(&self, s: String) -> Result<Vec<Prompt>> {
@@ -41,7 +41,7 @@ impl PromptParser {
         Ok(v)
     }
 
-    pub fn template(&self, s: String, responses: Vec<PromptResponse>) -> Result<String> {
+    pub fn template(&self, s: String, responses: &[PromptResponse]) -> Result<String> {
         let mut tmp = String::new();
         let mut inside = false;
         let mut out = String::new();
@@ -56,7 +56,7 @@ impl PromptParser {
                 }
 
                 let mut matched = false;
-                for response in &responses {
+                for response in responses {
                     if response.template == tmp {
                         out += &response.to_string();
                         matched = true;
@@ -94,7 +94,7 @@ pub struct Prompt {
     pub input_type: InputType,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, Default, PartialEq, Serialize, Deserialize)]
 pub struct PromptCollection(Vec<Prompt>);
 
 impl PromptCollection {
@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn prompt_responding() {
-        let parser = PromptParser(PromptCollection(PROMPTS.clone()));
+        let parser = PromptParser(&PromptCollection(PROMPTS.clone()));
         assert!(parser.template("?greeting?".into(), vec![]).is_err());
         assert!(parser
             .template(
@@ -235,7 +235,7 @@ mod tests {
 
     #[test]
     fn prompt_gathering() {
-        let parser = PromptParser(PromptCollection(PROMPTS.clone()));
+        let parser = PromptParser(&PromptCollection(PROMPTS.clone()));
 
         assert_eq!(
             *parser
