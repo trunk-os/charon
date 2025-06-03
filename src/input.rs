@@ -6,10 +6,6 @@ use std::str::FromStr;
 pub struct TemplatedInput<T> {
     input: String,
     #[serde(skip)]
-    prompts: PromptCollection,
-    #[serde(skip)]
-    responses: Vec<PromptResponse>,
-    #[serde(skip)]
     marker: std::marker::PhantomData<T>,
 }
 
@@ -18,14 +14,16 @@ where
     T: FromStr,
     T::Err: Send + Sync + std::error::Error + 'static,
 {
-    pub fn output(&self) -> Result<T, anyhow::Error>
+    pub fn output(
+        &self,
+        prompts: PromptCollection,
+        responses: Vec<PromptResponse>,
+    ) -> Result<T, anyhow::Error>
     where
         T: Serialize,
     {
-        let parser = PromptParser(self.prompts.clone());
-        Ok(parser
-            .template(self.input.clone(), &self.responses)?
-            .parse()?)
+        let parser = PromptParser(prompts.clone());
+        Ok(parser.template(self.input.clone(), &responses)?.parse()?)
     }
 }
 

@@ -1,7 +1,7 @@
 use crate::{Global, GlobalRegistry, PromptCollection, TemplatedInput};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 const PACKAGE_SUBPATH: &str = "packages";
 
@@ -21,6 +21,8 @@ pub struct SourcePackage {
     pub resources: Option<Resources>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prompts: Option<PromptCollection>,
+    #[serde(skip)]
+    pub root: Option<std::path::PathBuf>,
 }
 
 impl PartialOrd for SourcePackage {
@@ -35,6 +37,47 @@ impl Ord for SourcePackage {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.title.cmp(&other.title)
     }
+}
+
+impl SourcePackage {
+    pub fn from_file(root: &PathBuf, name: &str, version: &str) -> Result<Self> {
+        let pb = root
+            .join(PACKAGE_SUBPATH)
+            .join(name)
+            .join(&format!("{}.json", version));
+        let mut res: Self =
+            serde_json::from_reader(std::fs::OpenOptions::new().read(true).open(pb)?)?;
+        res.root = Some(root.clone());
+        Ok(res)
+    }
+
+    #[inline]
+    pub fn globals(&self) -> Result<Global> {
+        if self.root.is_none() {
+            return Err(anyhow!(
+                "source package does not contain registry information, cannot find globals"
+            ));
+        }
+
+        let registry = GlobalRegistry {
+            root: self.root.clone().unwrap().clone(),
+        };
+
+        registry.get(&self.title.name)
+    }
+
+    // pub fn compile(&self) -> CompiledPackage {
+    // CompiledPackage {
+    //     title: self.title.clone(),
+    //     description: self.description.clone(),
+    //     dependencies: self.dependencies.clone(),
+    //     source: (),
+    //     networking: (),
+    //     storage: (),
+    //     system: (),
+    //     resources: (),
+    // }
+    // }
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -185,31 +228,13 @@ pub struct CompiledResources {
     // probably something to bring in PCI devices to appease the crypto folks
 }
 
-impl SourcePackage {
-    pub fn from_file(name: &Path) -> Result<Self> {
-        Ok(serde_json::from_reader(
-            std::fs::OpenOptions::new().read(true).open(name)?,
-        )?)
-    }
-
-    #[inline]
-    pub fn globals(&self, root: &PathBuf) -> Result<Global> {
-        let registry = GlobalRegistry { root: root.clone() };
-
-        registry.get(&self.title.name)
-    }
-}
-
 pub struct Registry {
     root: PathBuf,
 }
 
 impl Registry {
     pub fn load(&self, name: &str, version: &str) -> Result<SourcePackage> {
-        let pb = self.root.join(PACKAGE_SUBPATH).join(name);
-        Ok(SourcePackage::from_file(
-            &pb.join(&format!("{}.json", version)),
-        )?)
+        Ok(SourcePackage::from_file(&self.root, name, version)?)
     }
 
     pub fn write(&self, package: &SourcePackage) -> Result<()> {
@@ -232,7 +257,7 @@ impl Registry {
 
     #[inline]
     pub fn globals(&self, package: &SourcePackage) -> Result<Global> {
-        package.globals(&self.root)
+        package.globals()
     }
 }
 
@@ -248,6 +273,7 @@ mod tests {
                 name: "plex".into(),
                 version: "1.2.3".into(),
             },
+            root: Some(dir.path().to_path_buf()),
             ..Default::default()
         }];
 
@@ -270,6 +296,7 @@ mod tests {
                 name: "plex".into(),
                 version: "1.2.3".into(),
             },
+            root: Some(dir.path().to_path_buf()),
             ..Default::default()
         }];
 
