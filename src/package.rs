@@ -3,6 +3,13 @@ use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+//
+// something really important to understand about this code is that the TemplatedInput type is only
+// really constrained by the concrete types it leverages. Everything else in input.rs is basically
+// just enough bullshit to keep rust happy. A proc macro would make this much simpler, and I will
+// get to that eventually.
+//
+
 const PACKAGE_SUBPATH: &str = "packages";
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
