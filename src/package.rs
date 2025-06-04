@@ -397,6 +397,12 @@ impl Registry {
         Self { root }
     }
 
+    pub fn remove(&self, name: &str) -> Result<()> {
+        Ok(std::fs::remove_dir_all(
+            self.root.join(PACKAGE_SUBPATH).join(&name),
+        )?)
+    }
+
     pub fn load(&self, name: &str, version: &str) -> Result<SourcePackage> {
         Ok(SourcePackage::from_file(&self.root, name, version)?)
     }

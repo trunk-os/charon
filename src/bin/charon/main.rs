@@ -16,6 +16,7 @@ struct MainArgs {
 #[derive(Subcommand, Debug, Clone)]
 enum Commands {
     NewPackage(NewPackageArgs),
+    RemovePackage(RemovePackageArgs),
 }
 
 #[derive(Parser, Debug, Clone)]
@@ -23,6 +24,12 @@ enum Commands {
 struct NewPackageArgs {
     name: String,
     initial_version: String,
+}
+
+#[derive(Parser, Debug, Clone)]
+#[command(version, about="Remove a package completely from the repository", long_about=None)]
+struct RemovePackageArgs {
+    name: String,
 }
 
 fn main() -> Result<()> {
@@ -46,6 +53,12 @@ fn main() -> Result<()> {
                 ..Default::default()
             };
             gr.set(&g)?;
+        }
+        Commands::RemovePackage(rp_args) => {
+            let r = Registry::new(args.registry_path.clone().unwrap_or(cwd.clone()));
+            let gr = GlobalRegistry::new(args.registry_path.unwrap_or(cwd));
+            r.remove(&rp_args.name)?;
+            gr.remove(&rp_args.name)?;
         }
     }
 

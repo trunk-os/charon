@@ -85,6 +85,14 @@ impl GlobalRegistry {
         Self { root }
     }
 
+    pub fn remove(&self, name: &str) -> Result<()> {
+        Ok(std::fs::remove_file(
+            self.root
+                .join(GLOBAL_SUBPATH)
+                .join(&format!("{}.json", name)),
+        )?)
+    }
+
     pub fn get(&self, name: &str) -> Result<Global> {
         Ok(serde_json::from_reader(
             std::fs::OpenOptions::new().read(true).open(
