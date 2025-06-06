@@ -492,9 +492,9 @@ mod tests {
 
         assert!(registry.validate("with-dependencies", "0.0.1").is_ok());
 
-        // validates dependencies
+        // depends on a non-existent version of plex
         assert!(registry.validate("bad-dependencies", "0.0.1").is_err());
-        // validates dependencies
+        // depends on non-existent package
         assert!(registry.validate("bad-dependencies", "0.0.2").is_err());
         // depends on a bad package
         assert!(registry.validate("bad-dependencies", "0.0.3").is_err());
