@@ -399,6 +399,11 @@ impl Registry {
 
     pub fn validate(&self, name: &str, version: &str) -> Result<()> {
         let package = self.load(name, version)?;
+
+        if package.title.name != name || package.title.version != version {
+            return Err(anyhow!("Invalid name or version"));
+        }
+
         // validate we can load globals, but we don't need them
         let _ = package.globals()?;
 
@@ -406,8 +411,7 @@ impl Registry {
 
         // validate package dependencies exist
         for item in &dependencies {
-            let pkg = self.load(&item.name, &item.version)?;
-            let _ = pkg.globals()?;
+            self.validate(&item.name, &item.version)?;
         }
 
         Ok(())
@@ -452,6 +456,24 @@ mod tests {
     use crate::{
         CompiledPackage, Global, GlobalRegistry, PackageTitle, Registry, SourcePackage, Variables,
     };
+
+    #[test]
+    fn validate() {
+        let registry = Registry::new("testdata/repository".into());
+        assert!(registry.validate("plex", "0.0.1").is_ok());
+        assert!(registry.validate("plex", "0.0.2").is_ok());
+        assert!(registry.validate("plex", "0.0.3").is_err()); // doesn't exist
+        assert!(registry.validate("no-variables", "0.0.1").is_err());
+        assert!(registry.validate("with-dependencies", "0.0.1").is_ok()); // validates dependencies
+        assert!(registry.validate("bad-dependencies", "0.0.1").is_err()); // validates dependencies
+        assert!(registry.validate("bad-dependencies", "0.0.2").is_err()); // validates dependencies
+        assert!(registry.validate("bad-dependencies", "0.0.3").is_err()); // depends on a bad
+                                                                          // package
+        assert!(registry.validate("bad-name-version", "0.0.1").is_err()); // invalid name, valid
+                                                                          // version
+        assert!(registry.validate("bad-name-version", "0.0.2").is_err()); // invalid version, valid
+                                                                          // name
+    }
 
     #[test]
     fn io() {
