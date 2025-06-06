@@ -131,5 +131,30 @@ mod tests {
             .unwrap(),
             string_vec(vec!["podman", "--name", "plex-0.0.1", "-d", "scratch"])
         );
+        assert_eq!(
+            generate_command(
+                load(&registry, "podman-test", "0.0.1").unwrap(),
+                "/volume-root".into()
+            )
+            .unwrap(),
+            string_vec(vec![
+                "podman",
+                "--name",
+                "podman-test-0.0.1",
+                "-v",
+                "/volume-root/private:/private-test:rprivate",
+                "-v",
+                "/volume-root/shared:/shared-test:rshared",
+                "--pid",
+                "host",
+                "--network",
+                "host",
+                "--privileged",
+                "--cap-add",
+                "SYS_ADMIN",
+                "-d",
+                "debian"
+            ])
+        );
     }
 }
