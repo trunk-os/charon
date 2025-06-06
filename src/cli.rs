@@ -53,16 +53,14 @@ pub fn generate_container_command(
         if let Some(mountpoint) = &volume.mountpoint {
             let volmap = if !volume.private {
                 format!(
-                    "{}/{}:{}:rshared",
-                    volume_root.display(),
-                    volume.name,
+                    "{}:{}:rshared",
+                    volume_root.join(&volume.name).display(),
                     mountpoint
                 )
             } else {
                 format!(
-                    "{}/{}:{}:rprivate",
-                    volume_root.display(),
-                    volume.name,
+                    "{}:{}:rprivate",
+                    volume_root.join(&volume.name).display(),
                     mountpoint
                 )
             };
