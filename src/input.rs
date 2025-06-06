@@ -6,10 +6,9 @@ use std::str::FromStr;
 // see package.rs for some important understanding about this package that I won't repeat here
 //
 
-#[derive(Debug, Clone, Eq, PartialEq, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct TemplatedInput<T> {
     input: String,
-    #[serde(skip)]
     marker: std::marker::PhantomData<T>,
 }
 
@@ -111,7 +110,22 @@ where
     }
 }
 
-impl<'de, T> Visitor<'de> for TemplatedInput<T>
+impl<'de, T: Default> Deserialize<'de> for TemplatedInput<T>
+where
+    T: Default,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_str(TemplatedInputVisitor::default())
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct TemplatedInputVisitor<T>(std::marker::PhantomData<T>);
+
+impl<'de, T> Visitor<'de> for TemplatedInputVisitor<T>
 where
     T: Default,
 {
@@ -132,7 +146,7 @@ where
     where
         E: serde::de::Error,
     {
-        Ok(Self {
+        Ok(Self::Value {
             input: v.to_string(),
             marker: Default::default(),
         })

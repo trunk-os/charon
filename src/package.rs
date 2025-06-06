@@ -16,8 +16,8 @@ const PACKAGE_SUBPATH: &str = "packages";
 pub struct SourcePackage {
     pub title: PackageTitle,
     pub description: String,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub dependencies: Vec<PackageTitle>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dependencies: Option<Vec<PackageTitle>>,
     pub source: Source,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub networking: Option<Networking>,
@@ -80,7 +80,7 @@ impl SourcePackage {
         Ok(CompiledPackage {
             title: self.title.clone(),
             description: self.description.clone(),
-            dependencies: self.dependencies.clone(),
+            dependencies: self.dependencies.clone().unwrap_or_default(),
             source: self.source.compile(&globals, &prompts, responses)?,
             networking: self
                 .networking
@@ -395,6 +395,22 @@ pub struct Registry {
 impl Registry {
     pub fn new(root: PathBuf) -> Self {
         Self { root }
+    }
+
+    pub fn validate(&self, name: &str, version: &str) -> Result<()> {
+        let package = self.load(name, version)?;
+        // validate we can load globals, but we don't need them
+        let _ = package.globals()?;
+
+        let dependencies = package.dependencies.clone().unwrap_or_default();
+
+        // validate package dependencies exist
+        for item in &dependencies {
+            let pkg = self.load(&item.name, &item.version)?;
+            let _ = pkg.globals()?;
+        }
+
+        Ok(())
     }
 
     pub fn remove(&self, name: &str) -> Result<()> {
