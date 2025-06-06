@@ -70,9 +70,10 @@ pub fn generate_container_command(
         }
     }
 
-    let name = match &package.source {
-        CompiledSource::Container(name) => name,
-        _ => return Err(anyhow!("Genuinely curious how you got here, not gonna lie")),
+    let name = if let CompiledSource::Container(name) = &package.source {
+        name
+    } else {
+        return Err(anyhow!("Genuinely curious how you got here, not gonna lie"));
     };
 
     if package.system.host_pid {
