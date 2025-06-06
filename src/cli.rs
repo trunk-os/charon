@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn podman_cli() {
-        let registry = Registry::new("testdata/repository".into());
+        let registry = Registry::new("testdata/registry".into());
         assert_eq!(
             generate_command(
                 load(&registry, "plex", "0.0.2").unwrap(),

@@ -20,14 +20,14 @@ enum Commands {
 }
 
 #[derive(Parser, Debug, Clone)]
-#[command(version, about="Create a new Package Repository", long_about=None)]
+#[command(version, about="Create a new Package Registry", long_about=None)]
 struct NewPackageArgs {
     name: String,
     initial_version: String,
 }
 
 #[derive(Parser, Debug, Clone)]
-#[command(version, about="Remove a package completely from the repository", long_about=None)]
+#[command(version, about="Remove a package completely from the registry", long_about=None)]
 struct RemovePackageArgs {
     name: String,
 }

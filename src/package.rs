@@ -481,7 +481,7 @@ mod tests {
 
     #[test]
     fn validate() {
-        let registry = Registry::new("testdata/repository".into());
+        let registry = Registry::new("testdata/registry".into());
         assert!(registry.validate("plex", "0.0.1").is_ok());
         assert!(registry.validate("plex", "0.0.2").is_ok());
         assert!(registry.validate("plex", "0.0.3").is_err()); // doesn't exist
