@@ -75,6 +75,23 @@ pub fn generate_container_command(
         _ => return Err(anyhow!("Genuinely curious how you got here, not gonna lie")),
     };
 
+    if package.system.host_pid {
+        cmd.append(&mut vec!["--pid".into(), "host".into()]);
+    }
+
+    // FIXME: check for this conflict in validate
+    if package.system.host_net && package.networking.internal_network.is_none() {
+        cmd.append(&mut vec!["--network".into(), "host".into()]);
+    }
+
+    if package.system.privileged {
+        cmd.append(&mut vec!["--privileged".into()]);
+    }
+
+    for cap in &package.system.capabilities {
+        cmd.append(&mut vec!["--cap-add".into(), cap.into()]);
+    }
+
     cmd.append(&mut vec!["-d".into(), name.into()]);
 
     Ok(cmd)
