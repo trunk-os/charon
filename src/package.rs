@@ -290,6 +290,7 @@ pub struct CompiledStorage {
 pub struct Volume {
     pub name: TemplatedInput<String>,
     pub size: TemplatedInput<u64>,
+    pub mountpoint: Option<TemplatedInput<String>>,
     pub recreate: TemplatedInput<bool>,
     pub private: TemplatedInput<bool>,
 }
@@ -301,9 +302,23 @@ impl Volume {
         prompts: &PromptCollection,
         responses: Responses<'a>,
     ) -> Result<CompiledVolume> {
+        let mountpoint = if let Some(mountpoint) = self
+            .mountpoint
+            .as_ref()
+            .map(|x| x.output(globals, prompts, responses))
+        {
+            match mountpoint {
+                Ok(x) => Some(x),
+                Err(e) => return Err(e),
+            }
+        } else {
+            None
+        };
+
         Ok(CompiledVolume {
             name: self.name.output(globals, prompts, responses)?,
             size: self.size.output(globals, prompts, responses)?,
+            mountpoint,
             recreate: self.recreate.output(globals, prompts, responses)?,
             private: self.private.output(globals, prompts, responses)?,
         })
@@ -314,6 +329,7 @@ impl Volume {
 pub struct CompiledVolume {
     pub name: String,
     pub size: u64,
+    pub mountpoint: Option<String>,
     pub recreate: bool,
     pub private: bool,
 }
