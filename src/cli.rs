@@ -97,3 +97,39 @@ pub fn generate_container_command(
 
     Ok(cmd)
 }
+
+#[cfg(test)]
+mod tests {
+    #[allow(unused)]
+    use crate::*;
+    use anyhow::Result;
+
+    fn string_vec(v: Vec<&str>) -> Vec<String> {
+        v.iter().map(ToString::to_string).collect::<Vec<String>>()
+    }
+
+    fn load(registry: &Registry, name: &str, version: &str) -> Result<CompiledPackage> {
+        registry.load(name, version)?.compile(&[])
+    }
+
+    #[test]
+    fn podman_cli() {
+        let registry = Registry::new("testdata/repository".into());
+        assert_eq!(
+            generate_command(
+                load(&registry, "plex", "0.0.2").unwrap(),
+                "/volume-root".into()
+            )
+            .unwrap(),
+            string_vec(vec!["podman", "--name", "plex-0.0.2", "-d", "scratch"])
+        );
+        assert_eq!(
+            generate_command(
+                load(&registry, "plex", "0.0.1").unwrap(),
+                "/volume-root".into()
+            )
+            .unwrap(),
+            string_vec(vec!["podman", "--name", "plex-0.0.1", "-d", "scratch"])
+        );
+    }
+}
