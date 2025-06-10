@@ -4,6 +4,8 @@ use std::path::PathBuf;
 
 const PODMAN_COMMAND: &str = "podman";
 const QEMU_COMMAND: &str = "qemu-system-x86_64";
+const QEMU_IMAGE_FILENAME: &str = "image";
+const QEMU_MONITOR_FILENAME: &str = "qemu-monitor";
 
 pub fn generate_command(package: CompiledPackage, volume_root: PathBuf) -> Result<Vec<String>> {
     match package.source {
@@ -33,7 +35,7 @@ pub fn generate_vm_command(
             "-chardev".into(),
             format!(
                 "socket,server=on,wait=off,id=char0,path={}",
-                volume_root.join("qemu-monitor").display(),
+                volume_root.join(QEMU_MONITOR_FILENAME).display(),
             ),
             "-mon".into(),
             "chardev=char0,mode=control,pretty=on".into(),
@@ -58,12 +60,28 @@ pub fn generate_vm_command(
         .collect::<Vec<String>>(),
     );
 
+    cmd.push("-drive".into());
+    cmd.push(format!(
+        "driver=raw,if=virtio,file={},cache=none,media=disk,index={}",
+        volume_root.join(QEMU_IMAGE_FILENAME).display(),
+        0,
+    ));
+
+    let excluded_names = vec![QEMU_IMAGE_FILENAME, QEMU_MONITOR_FILENAME];
+
     for (x, volume) in package.storage.volumes.iter().enumerate() {
+        if excluded_names.contains(&volume.name.as_str()) {
+            return Err(anyhow!(
+                "VM volumes cannot be named '{}'",
+                excluded_names.join(", or ")
+            ));
+        }
+
         cmd.push("-drive".to_string());
         cmd.push(format!(
             "driver=raw,if=virtio,file={},cache=none,media=disk,index={}",
             volume_root.join(&volume.name).display(), // FIXME formalize making these into files; this doesn't work right yet
-            x
+            x + 1,
         ));
     }
 
