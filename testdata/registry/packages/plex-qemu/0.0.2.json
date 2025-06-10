@@ -7,6 +7,16 @@
   "source": {
     "http": "https://example.org/scratch.img.gz"
   },
+  "storage": {
+    "volumes": [
+      {
+        "name": "test",
+        "size": "1234",
+        "private": "false",
+        "recreate": "false"
+      }
+    ]
+  },
   "resources": {
     "cpus": "4",
     "memory": "8192"

@@ -7,6 +7,10 @@
   "source": {
     "http": "https://example.org/scratch.img.gz"
   },
+  "networking": {
+    "forward_ports": [["1234", "5678"]],
+    "expose_ports": [["2345", "6789"]]
+  },
   "resources": {
     "cpus": "8",
     "memory": "4096"

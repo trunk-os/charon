@@ -216,7 +216,9 @@ mod tests {
                 "-nic",
                 "user",
                 "-drive",
-                "driver=raw,if=virtio,file=/volume-root/image,cache=none,media=disk,index=0"
+                "driver=raw,if=virtio,file=/volume-root/image,cache=none,media=disk,index=0",
+                "-drive",
+                "driver=raw,if=virtio,file=/volume-root/test,cache=none,media=disk,index=1"
             ]),
         );
 
@@ -244,7 +246,7 @@ mod tests {
                 "-smp",
                 "cpus=8,cores=8,maxcpus=8",
                 "-nic",
-                "user",
+                "user,hostfwd=tcp:0.0.0.0:1234-:5678,hostfwd=tcp:0.0.0.0:2345-:6789",
                 "-drive",
                 "driver=raw,if=virtio,file=/volume-root/image,cache=none,media=disk,index=0"
             ]),
