@@ -1,0 +1,14 @@
+{
+  "title": {
+    "name": "plex-qemu",
+    "version": "0.0.2"
+  },
+  "description": "Please modify this description",
+  "source": {
+    "http": "https://example.org/scratch.img.gz"
+  },
+  "resources": {
+    "cpus": "4",
+    "memory": "8192"
+  }
+}

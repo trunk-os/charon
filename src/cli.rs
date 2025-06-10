@@ -64,6 +64,7 @@ pub fn generate_vm_command(
     cmd.push(format!(
         "driver=raw,if=virtio,file={},cache=none,media=disk,index={}",
         volume_root.join(QEMU_IMAGE_FILENAME).display(),
+        // NOTE: this offsets the counter below for volumes
         0,
     ));
 
@@ -73,14 +74,17 @@ pub fn generate_vm_command(
         if excluded_names.contains(&volume.name.as_str()) {
             return Err(anyhow!(
                 "VM volumes cannot be named '{}'",
-                excluded_names.join(", or ")
+                // this outputs "'foo', or 'bar', or 'baz'"
+                excluded_names.join("', or '")
             ));
         }
 
         cmd.push("-drive".to_string());
         cmd.push(format!(
             "driver=raw,if=virtio,file={},cache=none,media=disk,index={}",
-            volume_root.join(&volume.name).display(), // FIXME formalize making these into files; this doesn't work right yet
+            // FIXME formalize making these into files; this doesn't work right yet
+            volume_root.join(&volume.name).display(),
+            // NOTE: the first drive is above, which is the VM image, which is why this is offset.
             x + 1,
         ));
     }
@@ -169,7 +173,10 @@ pub fn generate_container_command(
 
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::{
+        cli::{PODMAN_COMMAND, QEMU_COMMAND},
+        *,
+    };
     use anyhow::Result;
 
     fn string_vec(v: Vec<&str>) -> Vec<String> {
@@ -181,6 +188,70 @@ mod tests {
     }
 
     #[test]
+    fn qemu_cli() {
+        let registry = Registry::new("testdata/registry".into());
+        assert_eq!(
+            generate_command(
+                load(&registry, "plex-qemu", "0.0.2").unwrap(),
+                "/volume-root".into()
+            )
+            .unwrap(),
+            string_vec(vec![
+                QEMU_COMMAND,
+                "-nodefaults",
+                "-chardev",
+                "socket,server=on,wait=off,id=char0,path=/volume-root/qemu-monitor",
+                "-mon",
+                "chardev=char0,mode=control,pretty=on",
+                "-machine",
+                "accel=kvm",
+                "-vga",
+                "none",
+                "-m",
+                "8192M",
+                "-cpu",
+                "max",
+                "-smp",
+                "cpus=4,cores=4,maxcpus=4",
+                "-nic",
+                "user",
+                "-drive",
+                "driver=raw,if=virtio,file=/volume-root/image,cache=none,media=disk,index=0"
+            ]),
+        );
+
+        assert_eq!(
+            generate_command(
+                load(&registry, "plex-qemu", "0.0.1").unwrap(),
+                "/volume-root".into()
+            )
+            .unwrap(),
+            string_vec(vec![
+                QEMU_COMMAND,
+                "-nodefaults",
+                "-chardev",
+                "socket,server=on,wait=off,id=char0,path=/volume-root/qemu-monitor",
+                "-mon",
+                "chardev=char0,mode=control,pretty=on",
+                "-machine",
+                "accel=kvm",
+                "-vga",
+                "none",
+                "-m",
+                "4096M",
+                "-cpu",
+                "max",
+                "-smp",
+                "cpus=8,cores=8,maxcpus=8",
+                "-nic",
+                "user",
+                "-drive",
+                "driver=raw,if=virtio,file=/volume-root/image,cache=none,media=disk,index=0"
+            ]),
+        );
+    }
+
+    #[test]
     fn podman_cli() {
         let registry = Registry::new("testdata/registry".into());
         assert_eq!(
@@ -189,7 +260,13 @@ mod tests {
                 "/volume-root".into()
             )
             .unwrap(),
-            string_vec(vec!["podman", "--name", "plex-0.0.2", "-d", "scratch"])
+            string_vec(vec![
+                PODMAN_COMMAND,
+                "--name",
+                "plex-0.0.2",
+                "-d",
+                "scratch"
+            ])
         );
         assert_eq!(
             generate_command(
@@ -197,7 +274,13 @@ mod tests {
                 "/volume-root".into()
             )
             .unwrap(),
-            string_vec(vec!["podman", "--name", "plex-0.0.1", "-d", "scratch"])
+            string_vec(vec![
+                PODMAN_COMMAND,
+                "--name",
+                "plex-0.0.1",
+                "-d",
+                "scratch"
+            ])
         );
         assert_eq!(
             generate_command(
@@ -206,7 +289,7 @@ mod tests {
             )
             .unwrap(),
             string_vec(vec![
-                "podman",
+                PODMAN_COMMAND,
                 "--name",
                 "podman-test-0.0.1",
                 "-v",
