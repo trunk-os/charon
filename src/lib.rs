@@ -1,4 +1,3 @@
-#![allow(unused)]
 mod cli;
 mod globals;
 mod input;

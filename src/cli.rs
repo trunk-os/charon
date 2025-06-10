@@ -98,7 +98,6 @@ pub fn generate_container_command(
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused)]
     use crate::*;
     use anyhow::Result;
 
