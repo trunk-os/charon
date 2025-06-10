@@ -13,10 +13,61 @@ pub fn generate_command(package: CompiledPackage, volume_root: PathBuf) -> Resul
 }
 
 pub fn generate_vm_command(
-    _package: &CompiledPackage,
-    _volume_root: &PathBuf,
+    package: &CompiledPackage,
+    volume_root: &PathBuf,
 ) -> Result<Vec<String>> {
-    Ok(vec![QEMU_COMMAND.to_string()])
+    let mut cmd = vec![QEMU_COMMAND.to_string()];
+
+    let mut fwdrules = Vec::new();
+    for (host, guest) in &package.networking.forward_ports {
+        fwdrules.push(format!(",hostfwd=tcp:0.0.0.0:{}-:{}", host, guest));
+    }
+
+    for (host, guest) in &package.networking.expose_ports {
+        fwdrules.push(format!(",hostfwd=tcp:0.0.0.0:{}-:{}", host, guest));
+    }
+
+    cmd.append(
+        &mut vec![
+            "-nodefaults".into(),
+            "-chardev".into(),
+            format!(
+                "socket,server=on,wait=off,id=char0,path={}",
+                volume_root.join("qemu-monitor").display(),
+            ),
+            "-mon".into(),
+            "chardev=char0,mode=control,pretty=on".into(),
+            "-machine".into(),
+            "accel=kvm".into(),
+            "-vga".into(),
+            "none".into(), // FIXME: move to VNC
+            "-m".into(),
+            format!("{}M", package.resources.memory),
+            "-cpu".into(),
+            "max".into(),
+            "-smp".into(),
+            format!(
+                "cpus={},cores={},maxcpus={}",
+                package.resources.cpus, package.resources.cpus, package.resources.cpus
+            ),
+            "-nic".into(),
+            format!("user{}", fwdrules.join("")),
+        ]
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<String>>(),
+    );
+
+    for (x, volume) in package.storage.volumes.iter().enumerate() {
+        cmd.push("-drive".to_string());
+        cmd.push(format!(
+            "driver=raw,if=virtio,file={},cache=none,media=disk,index={}",
+            volume_root.join(&volume.name).display(), // FIXME formalize making these into files; this doesn't work right yet
+            x
+        ));
+    }
+
+    Ok(cmd)
 }
 
 pub fn generate_container_command(
@@ -90,6 +141,8 @@ pub fn generate_container_command(
     for cap in &package.system.capabilities {
         cmd.append(&mut vec!["--cap-add".into(), cap.into()]);
     }
+
+    // TODO: cgroups
 
     cmd.append(&mut vec!["-d".into(), name.into()]);
 
