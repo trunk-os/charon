@@ -1,8 +1,58 @@
+use std::path::PathBuf;
+
 use crate::{Input, InputType};
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
+const RESPONSES_SUBPATH: &str = "responses";
 const DELIMITER: char = '?';
+
+pub struct ResponseRegistry {
+    pub root: PathBuf,
+}
+
+impl ResponseRegistry {
+    pub fn new(root: PathBuf) -> Self {
+        Self { root }
+    }
+
+    pub fn remove(&self, name: &str) -> Result<()> {
+        Ok(std::fs::remove_file(
+            self.root
+                .join(RESPONSES_SUBPATH)
+                .join(&format!("{}.json", name)),
+        )?)
+    }
+
+    pub fn get(&self, name: &str) -> Result<PromptResponses> {
+        Ok(serde_json::from_reader(
+            std::fs::OpenOptions::new().read(true).open(
+                self.root
+                    .join(RESPONSES_SUBPATH)
+                    .join(&format!("{}.json", name)),
+            )?,
+        )?)
+    }
+
+    pub fn set(&self, name: &str, responses: &PromptResponses) -> Result<()> {
+        let pb = self.root.join(RESPONSES_SUBPATH);
+
+        std::fs::create_dir_all(&pb)?;
+        let tmpname = pb.join(&format!("{}.json.tmp", name));
+        serde_json::to_writer_pretty(
+            std::fs::OpenOptions::new()
+                .create(true)
+                .write(true)
+                .open(&tmpname)?,
+            responses,
+        )?;
+
+        Ok(std::fs::rename(
+            &tmpname,
+            &pb.join(&format!("{}.json", name)),
+        )?)
+    }
+}
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct PromptResponses(Vec<PromptResponse>);
