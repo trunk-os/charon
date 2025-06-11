@@ -4,7 +4,14 @@ use serde::{Deserialize, Serialize};
 
 const DELIMITER: char = '?';
 
-pub type Responses<'a> = &'a [PromptResponse];
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub struct PromptResponses(Vec<PromptResponse>);
+
+impl From<Vec<PromptResponse>> for PromptResponses {
+    fn from(value: Vec<PromptResponse>) -> Self {
+        Self(value)
+    }
+}
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct PromptParser(pub PromptCollection);
@@ -43,7 +50,7 @@ impl PromptParser {
         Ok(v)
     }
 
-    pub fn template<'a>(&self, s: String, responses: Responses<'a>) -> Result<String> {
+    pub fn template(&self, s: String, responses: &PromptResponses) -> Result<String> {
         let mut tmp = String::new();
         let mut inside = false;
         let mut out = String::new();
@@ -58,7 +65,7 @@ impl PromptParser {
                 }
 
                 let mut matched = false;
-                for response in responses {
+                for response in &responses.0 {
                     if response.template == tmp {
                         out += &response.to_string();
                         matched = true;
@@ -148,30 +155,34 @@ mod tests {
     #[test]
     fn prompt_responding() {
         let parser = PromptParser(PromptCollection(PROMPTS.clone()));
-        assert!(parser.template("?greeting?".into(), &[]).is_err());
+        assert!(parser
+            .template("?greeting?".into(), &Default::default())
+            .is_err());
         assert!(parser
             .template(
                 "?greeting?".into(),
-                &[PromptResponse {
+                &(vec![PromptResponse {
                     template: "not-greeting".into(),
                     input: Input::Integer(20)
                 }]
+                .into()),
             )
             .is_err());
         assert!(parser
             .template(
                 "?greeting?".into(),
-                &[PromptResponse {
+                &(vec![PromptResponse {
                     template: "greeting".into(),
                     input: Input::String("hello, world!".into())
                 }]
+                .into())
             )
             .is_ok());
 
         assert!(parser
             .template(
                 "?greeting?".into(),
-                &[
+                &(vec![
                     PromptResponse {
                         template: "greeting".into(),
                         input: Input::String("hello, world!".into())
@@ -181,6 +192,7 @@ mod tests {
                         input: Input::String("hello, world!".into())
                     },
                 ]
+                .into()),
             )
             .is_ok());
 
@@ -188,10 +200,11 @@ mod tests {
             parser
                 .template(
                     "?greeting?".into(),
-                    &[PromptResponse {
+                    &(vec![PromptResponse {
                         template: "greeting".into(),
                         input: Input::String("hello, world!".into())
-                    },]
+                    }]
+                    .into())
                 )
                 .unwrap(),
             "hello, world!"
@@ -201,7 +214,7 @@ mod tests {
             parser
                 .template(
                     "?greeting? ?shoesize?".into(),
-                    &[
+                    &(vec![
                         PromptResponse {
                             template: "greeting".into(),
                             input: Input::String("hello, world!".into())
@@ -211,26 +224,41 @@ mod tests {
                             input: Input::Integer(20),
                         }
                     ]
+                    .into())
                 )
                 .unwrap(),
             "hello, world! 20"
         );
 
-        assert!(parser.template("?greeting".into(), &[]).is_ok());
+        assert!(parser
+            .template("?greeting".into(), &Default::default())
+            .is_ok());
         assert_eq!(
-            parser.template("?greeting".into(), &[]).unwrap(),
+            parser
+                .template("?greeting".into(), &Default::default())
+                .unwrap(),
             "?greeting"
         );
-        assert!(parser.template("?".into(), &[]).is_ok());
-        assert_eq!(parser.template("?".into(), &[]).unwrap(), "?");
-        assert!(parser.template("??".into(), &[]).is_ok());
-        assert_eq!(parser.template("??".into(), &[]).unwrap(), "?");
+        assert!(parser.template("?".into(), &Default::default()).is_ok());
         assert_eq!(
-            parser.template("why so serious?".into(), &[]).unwrap(),
+            parser.template("?".into(), &Default::default()).unwrap(),
+            "?"
+        );
+        assert!(parser.template("??".into(), &Default::default()).is_ok());
+        assert_eq!(
+            parser.template("??".into(), &Default::default()).unwrap(),
+            "?"
+        );
+        assert_eq!(
+            parser
+                .template("why so serious?".into(), &Default::default())
+                .unwrap(),
             "why so serious?"
         );
         assert_eq!(
-            parser.template("why so serious??".into(), &[]).unwrap(),
+            parser
+                .template("why so serious??".into(), &Default::default())
+                .unwrap(),
             "why so serious?"
         );
     }

@@ -184,7 +184,7 @@ mod tests {
     }
 
     fn load(registry: &Registry, name: &str, version: &str) -> Result<CompiledPackage> {
-        registry.load(name, version)?.compile(&[])
+        registry.load(name, version)?.compile(&Default::default())
     }
 
     #[test]

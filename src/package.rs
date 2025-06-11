@@ -1,4 +1,4 @@
-use crate::{Global, GlobalRegistry, PromptCollection, Responses, TemplatedInput};
+use crate::{Global, GlobalRegistry, PromptCollection, PromptResponses, TemplatedInput};
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -74,7 +74,7 @@ impl SourcePackage {
         registry.get(&self.title.name)
     }
 
-    pub fn compile<'a>(&self, responses: Responses<'a>) -> Result<CompiledPackage> {
+    pub fn compile(&self, responses: &PromptResponses) -> Result<CompiledPackage> {
         let globals = self.globals()?;
         let prompts = self.prompts.clone().unwrap_or_default();
         Ok(CompiledPackage {
@@ -160,11 +160,11 @@ impl Default for Source {
 }
 
 impl Source {
-    pub fn compile<'a>(
+    pub fn compile(
         &self,
         globals: &Global,
         prompts: &PromptCollection,
-        responses: Responses<'a>,
+        responses: &PromptResponses,
     ) -> Result<CompiledSource> {
         Ok(match self {
             Self::HTTP(x) => CompiledSource::HTTP(x.output(globals, prompts, responses)?),
@@ -199,11 +199,11 @@ pub struct Networking {
 }
 
 impl Networking {
-    pub fn compile<'a>(
+    pub fn compile(
         &self,
         globals: &Global,
         prompts: &PromptCollection,
-        responses: Responses<'a>,
+        responses: &PromptResponses,
     ) -> Result<CompiledNetworking> {
         let mut forward_ports = Vec::new();
         for port in &self.forward_ports {
@@ -272,11 +272,11 @@ pub struct Storage {
 }
 
 impl Storage {
-    pub fn compile<'a>(
+    pub fn compile(
         &self,
         globals: &Global,
         prompts: &PromptCollection,
-        responses: Responses<'a>,
+        responses: &PromptResponses,
     ) -> Result<CompiledStorage> {
         let mut v = Vec::new();
         for volume in &self.volumes {
@@ -302,11 +302,11 @@ pub struct Volume {
 }
 
 impl Volume {
-    pub fn compile<'a>(
+    pub fn compile(
         &self,
         globals: &Global,
         prompts: &PromptCollection,
-        responses: Responses<'a>,
+        responses: &PromptResponses,
     ) -> Result<CompiledVolume> {
         let mountpoint = if let Some(mountpoint) = self
             .mountpoint
@@ -351,11 +351,11 @@ pub struct System {
 }
 
 impl System {
-    pub fn compile<'a>(
+    pub fn compile(
         &self,
         globals: &Global,
         prompts: &PromptCollection,
-        responses: Responses<'a>,
+        responses: &PromptResponses,
     ) -> Result<CompiledSystem> {
         let mut capabilities = Vec::new();
 
@@ -390,11 +390,11 @@ pub struct Resources {
 }
 
 impl Resources {
-    pub fn compile<'a>(
+    pub fn compile(
         &self,
         globals: &Global,
         prompts: &PromptCollection,
-        responses: Responses<'a>,
+        responses: &PromptResponses,
     ) -> Result<CompiledResources> {
         Ok(CompiledResources {
             cpus: self.cpus.output(globals, prompts, responses)?,
@@ -605,7 +605,7 @@ mod tests {
         }
 
         let pkg = pr.load("plex", "1.2.3").unwrap();
-        let out = pkg.compile(&[]).unwrap();
+        let out = pkg.compile(&Default::default()).unwrap();
 
         assert_eq!(
             out,
