@@ -13,3 +13,6 @@ clap = { version = "*", features = [ "derive" ] }
 [dev-dependencies]
 tempfile = "*"
 lazy_static = "*"
+
+[features]
+qemu = []
