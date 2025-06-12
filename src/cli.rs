@@ -29,36 +29,31 @@ pub fn generate_vm_command(
         fwdrules.push(format!(",hostfwd=tcp:0.0.0.0:{}-:{}", host, guest));
     }
 
-    cmd.append(
-        &mut vec![
-            "-nodefaults".into(),
-            "-chardev".into(),
-            format!(
-                "socket,server=on,wait=off,id=char0,path={}",
-                volume_root.join(QEMU_MONITOR_FILENAME).display(),
-            ),
-            "-mon".into(),
-            "chardev=char0,mode=control,pretty=on".into(),
-            "-machine".into(),
-            "accel=kvm".into(),
-            "-vga".into(),
-            "none".into(), // FIXME: move to VNC
-            "-m".into(),
-            format!("{}M", package.resources.memory),
-            "-cpu".into(),
-            "max".into(),
-            "-smp".into(),
-            format!(
-                "cpus={},cores={},maxcpus={}",
-                package.resources.cpus, package.resources.cpus, package.resources.cpus
-            ),
-            "-nic".into(),
-            format!("user{}", fwdrules.join("")),
-        ]
-        .iter()
-        .map(ToString::to_string)
-        .collect::<Vec<String>>(),
-    );
+    cmd.append(&mut vec![
+        "-nodefaults".into(),
+        "-chardev".into(),
+        format!(
+            "socket,server=on,wait=off,id=char0,path={}",
+            volume_root.join(QEMU_MONITOR_FILENAME).display(),
+        ),
+        "-mon".into(),
+        "chardev=char0,mode=control,pretty=on".into(),
+        "-machine".into(),
+        "accel=kvm".into(),
+        "-vga".into(),
+        "none".into(), // FIXME: move to VNC
+        "-m".into(),
+        format!("{}M", package.resources.memory),
+        "-cpu".into(),
+        "max".into(),
+        "-smp".into(),
+        format!(
+            "cpus={},cores={},maxcpus={}",
+            package.resources.cpus, package.resources.cpus, package.resources.cpus
+        ),
+        "-nic".into(),
+        format!("user{}", fwdrules.join("")),
+    ]);
 
     cmd.push("-drive".into());
     cmd.push(format!(
