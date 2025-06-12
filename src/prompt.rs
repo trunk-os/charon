@@ -20,7 +20,7 @@ impl ResponseRegistry {
         Ok(std::fs::remove_file(
             self.root
                 .join(RESPONSES_SUBPATH)
-                .join(&format!("{}.json", name)),
+                .join(format!("{}.json", name)),
         )?)
     }
 
@@ -29,7 +29,7 @@ impl ResponseRegistry {
             std::fs::OpenOptions::new().read(true).open(
                 self.root
                     .join(RESPONSES_SUBPATH)
-                    .join(&format!("{}.json", name)),
+                    .join(format!("{}.json", name)),
             )?,
         )?)
     }
@@ -38,10 +38,11 @@ impl ResponseRegistry {
         let pb = self.root.join(RESPONSES_SUBPATH);
 
         std::fs::create_dir_all(&pb)?;
-        let tmpname = pb.join(&format!("{}.json.tmp", name));
+        let tmpname = pb.join(format!("{}.json.tmp", name));
         serde_json::to_writer_pretty(
             std::fs::OpenOptions::new()
                 .create(true)
+                .truncate(true)
                 .write(true)
                 .open(&tmpname)?,
             responses,
@@ -49,7 +50,7 @@ impl ResponseRegistry {
 
         Ok(std::fs::rename(
             &tmpname,
-            &pb.join(&format!("{}.json", name)),
+            pb.join(format!("{}.json", name)),
         )?)
     }
 }
@@ -168,9 +169,9 @@ pub struct PromptResponse {
     pub input: Input,
 }
 
-impl ToString for PromptResponse {
-    fn to_string(&self) -> String {
-        self.input.to_string()
+impl std::fmt::Display for PromptResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.input.to_string())
     }
 }
 

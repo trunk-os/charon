@@ -1,6 +1,6 @@
 use crate::{CompiledPackage, CompiledSource};
 use anyhow::{anyhow, Result};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 const PODMAN_COMMAND: &str = "podman";
 const QEMU_COMMAND: &str = "qemu-system-x86_64";
@@ -14,10 +14,7 @@ pub fn generate_command(package: CompiledPackage, volume_root: PathBuf) -> Resul
     }
 }
 
-pub fn generate_vm_command(
-    package: &CompiledPackage,
-    volume_root: &PathBuf,
-) -> Result<Vec<String>> {
+pub fn generate_vm_command(package: &CompiledPackage, volume_root: &Path) -> Result<Vec<String>> {
     let mut cmd = vec![QEMU_COMMAND.to_string()];
 
     let mut fwdrules = String::new();
@@ -63,7 +60,7 @@ pub fn generate_vm_command(
         0,
     ));
 
-    let excluded_names = vec![QEMU_IMAGE_FILENAME, QEMU_MONITOR_FILENAME];
+    let excluded_names = [QEMU_IMAGE_FILENAME, QEMU_MONITOR_FILENAME];
 
     for (x, volume) in package.storage.volumes.iter().enumerate() {
         if excluded_names.contains(&volume.name.as_str()) {
@@ -89,7 +86,7 @@ pub fn generate_vm_command(
 
 pub fn generate_container_command(
     package: &CompiledPackage,
-    volume_root: &PathBuf,
+    volume_root: &Path,
 ) -> Result<Vec<String>> {
     let mut cmd = vec![PODMAN_COMMAND.into()];
     let name = format!("{}-{}", package.title.name, package.title.version);

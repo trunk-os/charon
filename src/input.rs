@@ -189,14 +189,14 @@ pub enum Input {
     Null,
 }
 
-impl ToString for Input {
-    fn to_string(&self) -> String {
-        match self {
+impl std::fmt::Display for Input {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&match self {
             Input::Integer(x) => x.to_string(),
             Input::SignedInteger(x) => x.to_string(),
             Input::String(x) => x.to_string(),
             Input::Boolean(x) => x.to_string(),
             Input::Null => "null".to_string(),
-        }
+        })
     }
 }

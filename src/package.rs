@@ -3,7 +3,7 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 //
 // something really important to understand about this code is that the TemplatedInput type is only
@@ -38,7 +38,7 @@ pub struct SourcePackage {
 impl PartialOrd for SourcePackage {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.title.partial_cmp(&other.title)
+        Some(self.cmp(other))
     }
 }
 
@@ -50,14 +50,14 @@ impl Ord for SourcePackage {
 }
 
 impl SourcePackage {
-    pub fn from_file(root: &PathBuf, name: &str, version: &str) -> Result<Self> {
+    pub fn from_file(root: &Path, name: &str, version: &str) -> Result<Self> {
         let pb = root
             .join(PACKAGE_SUBPATH)
             .join(name)
-            .join(&format!("{}.json", version));
+            .join(format!("{}.json", version));
         let mut res: Self =
             serde_json::from_reader(std::fs::OpenOptions::new().read(true).open(pb)?)?;
-        res.root = Some(root.clone());
+        res.root = Some(root.to_path_buf());
         Ok(res)
     }
 
@@ -87,10 +87,12 @@ impl SourcePackage {
         Ok(ResponseRegistry::new(self.root.clone().unwrap().clone()))
     }
 
+    #[inline]
     pub fn set_responses(&self, responses: &PromptResponses) -> Result<()> {
         self.response_registry()?.set(&self.title.name, responses)
     }
 
+    #[inline]
     pub fn responses(&self) -> Result<PromptResponses> {
         self.response_registry()?.get(&self.title.name)
     }
@@ -150,10 +152,7 @@ pub struct PackageTitle {
 impl PartialOrd for PackageTitle {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        match self.name.partial_cmp(&other.name) {
-            Some(std::cmp::Ordering::Equal) | None => self.version.partial_cmp(&other.version),
-            Some(ord) => Some(ord),
-        }
+        Some(self.cmp(other))
     }
 }
 
@@ -464,21 +463,22 @@ impl Registry {
 
     pub fn remove(&self, name: &str) -> Result<()> {
         Ok(std::fs::remove_dir_all(
-            self.root.join(PACKAGE_SUBPATH).join(&name),
+            self.root.join(PACKAGE_SUBPATH).join(name),
         )?)
     }
 
     pub fn load(&self, name: &str, version: &str) -> Result<SourcePackage> {
-        Ok(SourcePackage::from_file(&self.root, name, version)?)
+        SourcePackage::from_file(&self.root, name, version)
     }
 
     pub fn write(&self, package: &SourcePackage) -> Result<()> {
         let pb = self.root.join(PACKAGE_SUBPATH).join(&package.title.name);
         std::fs::create_dir_all(&pb)?;
 
-        let name = pb.join(&format!("{}.json.tmp", package.title.version));
+        let name = pb.join(format!("{}.json.tmp", package.title.version));
         let f = std::fs::OpenOptions::new()
             .create(true)
+            .truncate(true)
             .write(true)
             .open(&name)?;
 
@@ -486,7 +486,7 @@ impl Registry {
 
         Ok(std::fs::rename(
             &name,
-            &pb.join(&format!("{}.json", package.title.version)),
+            pb.join(format!("{}.json", package.title.version)),
         )?)
     }
 

@@ -72,7 +72,7 @@ impl Ord for Global {
 
 impl PartialOrd for Global {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.name.partial_cmp(&other.name)
+        Some(self.cmp(other))
     }
 }
 
@@ -89,7 +89,7 @@ impl GlobalRegistry {
         Ok(std::fs::remove_file(
             self.root
                 .join(GLOBAL_SUBPATH)
-                .join(&format!("{}.json", name)),
+                .join(format!("{}.json", name)),
         )?)
     }
 
@@ -98,7 +98,7 @@ impl GlobalRegistry {
             std::fs::OpenOptions::new().read(true).open(
                 self.root
                     .join(GLOBAL_SUBPATH)
-                    .join(&format!("{}.json", name)),
+                    .join(format!("{}.json", name)),
             )?,
         )?)
     }
@@ -107,18 +107,19 @@ impl GlobalRegistry {
         let pb = self.root.join(GLOBAL_SUBPATH);
 
         std::fs::create_dir_all(&pb)?;
-        let name = pb.join(&format!("{}.json.tmp", &global.name));
+        let name = pb.join(format!("{}.json.tmp", global.name));
         serde_json::to_writer_pretty(
             std::fs::OpenOptions::new()
                 .create(true)
+                .truncate(true)
                 .write(true)
                 .open(&name)?,
-            &global,
+            global,
         )?;
 
         Ok(std::fs::rename(
-            &name,
-            &pb.join(&format!("{}.json", &global.name)),
+            name,
+            pb.join(format!("{}.json", &global.name)),
         )?)
     }
 }
