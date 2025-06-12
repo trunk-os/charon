@@ -5,7 +5,7 @@
   },
   "description": "Please modify this description",
   "source": {
-    "http": "https://example.org/scratch.img.gz"
+    "url": "https://example.org/scratch.img.gz"
   },
   "networking": {
     "forward_ports": [["1234", "5678"]],

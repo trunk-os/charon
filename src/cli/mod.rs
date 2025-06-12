@@ -3,6 +3,7 @@ use crate::{
     CompiledPackage, CompiledSource,
 };
 use anyhow::{anyhow, Result};
+//use curl::easy::Easy;
 use std::path::{Path, PathBuf};
 
 #[cfg(test)]
@@ -13,9 +14,11 @@ const QEMU_COMMAND: &str = "qemu-system-x86_64";
 const QEMU_IMAGE_FILENAME: &str = "image";
 const QEMU_MONITOR_FILENAME: &str = "qemu-monitor";
 
+///pub fn download_vm_image(package: &CompiledPackage, volume_root: &Path) -> Result<()> {}
+
 pub fn generate_command(package: CompiledPackage, volume_root: PathBuf) -> Result<Vec<String>> {
     match package.source {
-        CompiledSource::HTTP(_) => generate_vm_command(&package, &volume_root),
+        CompiledSource::URL(_) => generate_vm_command(&package, &volume_root),
         CompiledSource::Container(_) => generate_container_command(&package, &volume_root),
     }
 }

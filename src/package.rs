@@ -175,8 +175,8 @@ impl Ord for PackageTitle {
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Source {
-    #[serde(rename = "http")]
-    HTTP(TemplatedInput<String>),
+    #[serde(rename = "url")]
+    URL(TemplatedInput<String>),
     #[serde(rename = "container")]
     Container(TemplatedInput<String>),
 }
@@ -196,7 +196,7 @@ impl Source {
         responses: &PromptResponses,
     ) -> Result<CompiledSource> {
         Ok(match self {
-            Self::HTTP(x) => CompiledSource::HTTP(x.output(globals, prompts, responses)?),
+            Self::URL(x) => CompiledSource::URL(x.output(globals, prompts, responses)?),
             Self::Container(x) => CompiledSource::Container(x.output(globals, prompts, responses)?),
         })
     }
@@ -204,8 +204,8 @@ impl Source {
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum CompiledSource {
-    #[serde(rename = "http")]
-    HTTP(String),
+    #[serde(rename = "url")]
+    URL(String),
     #[serde(rename = "container")]
     Container(String),
 }
