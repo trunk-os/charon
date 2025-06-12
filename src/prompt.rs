@@ -4,7 +4,7 @@ use crate::{Input, InputType};
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
-const RESPONSES_SUBPATH: &str = "responses";
+pub const RESPONSES_SUBPATH: &str = "responses";
 const DELIMITER: char = '?';
 
 pub struct ResponseRegistry {

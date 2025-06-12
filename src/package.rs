@@ -1,4 +1,6 @@
-use crate::{Global, GlobalRegistry, PromptCollection, PromptResponses, TemplatedInput};
+use crate::{
+    Global, GlobalRegistry, PromptCollection, PromptResponses, ResponseRegistry, TemplatedInput,
+};
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -74,34 +76,55 @@ impl SourcePackage {
         registry.get(&self.title.name)
     }
 
-    pub fn compile(&self, responses: &PromptResponses) -> Result<CompiledPackage> {
+    #[inline]
+    pub fn response_registry(&self) -> Result<ResponseRegistry> {
+        if self.root.is_none() {
+            return Err(anyhow!(
+                "source package does not contain registry information, cannot find responses"
+            ));
+        }
+
+        Ok(ResponseRegistry::new(self.root.clone().unwrap().clone()))
+    }
+
+    pub fn set_responses(&self, responses: &PromptResponses) -> Result<()> {
+        self.response_registry()?.set(&self.title.name, responses)
+    }
+
+    pub fn responses(&self) -> Result<PromptResponses> {
+        self.response_registry()?.get(&self.title.name)
+    }
+
+    pub fn compile(&self) -> Result<CompiledPackage> {
         let globals = self.globals()?;
         let prompts = self.prompts.clone().unwrap_or_default();
+        let responses = self.responses().unwrap_or_default();
+
         Ok(CompiledPackage {
             title: self.title.clone(),
             description: self.description.clone(),
             dependencies: self.dependencies.clone().unwrap_or_default(),
-            source: self.source.compile(&globals, &prompts, responses)?,
+            source: self.source.compile(&globals, &prompts, &responses)?,
             networking: self
                 .networking
                 .clone()
                 .unwrap_or_default()
-                .compile(&globals, &prompts, responses)?,
+                .compile(&globals, &prompts, &responses)?,
             storage: self
                 .storage
                 .clone()
                 .unwrap_or_default()
-                .compile(&globals, &prompts, responses)?,
+                .compile(&globals, &prompts, &responses)?,
             system: self
                 .system
                 .clone()
                 .unwrap_or_default()
-                .compile(&globals, &prompts, responses)?,
+                .compile(&globals, &prompts, &responses)?,
             resources: self
                 .resources
                 .clone()
                 .unwrap_or_default()
-                .compile(&globals, &prompts, responses)?,
+                .compile(&globals, &prompts, &responses)?,
         })
     }
 }
@@ -605,7 +628,7 @@ mod tests {
         }
 
         let pkg = pr.load("plex", "1.2.3").unwrap();
-        let out = pkg.compile(&Default::default()).unwrap();
+        let out = pkg.compile().unwrap();
 
         assert_eq!(
             out,
