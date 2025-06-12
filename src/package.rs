@@ -149,6 +149,13 @@ pub struct PackageTitle {
     pub version: String,
 }
 
+impl std::fmt::Display for PackageTitle {
+    #[inline]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&format!("{}-{}", self.name, self.version))
+    }
+}
+
 impl PartialOrd for PackageTitle {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {

@@ -1,4 +1,7 @@
-use crate::{CompiledPackage, CompiledSource};
+use crate::{
+    qmp::{client::Client, messages::GenericReturn},
+    CompiledPackage, CompiledSource,
+};
 use anyhow::{anyhow, Result};
 use std::path::{Path, PathBuf};
 
@@ -12,6 +15,30 @@ pub fn generate_command(package: CompiledPackage, volume_root: PathBuf) -> Resul
         CompiledSource::HTTP(_) => generate_vm_command(&package, &volume_root),
         CompiledSource::Container(_) => generate_container_command(&package, &volume_root),
     }
+}
+
+fn vm_client(package: &CompiledPackage, volume_root: &Path) -> Result<Client> {
+    match Client::new(volume_root.join(QEMU_MONITOR_FILENAME)) {
+        Ok(mut us) => {
+            us.handshake()?;
+            us.send_command::<GenericReturn>("qmp_capabilities", None)?;
+            Ok(us)
+        }
+        Err(_) => Err(anyhow!("{} is not running or not monitored", package.title)),
+    }
+}
+
+pub fn vm_ping(package: &CompiledPackage, volume_root: &Path) -> Result<()> {
+    vm_client(package, volume_root)?;
+    Ok(())
+}
+
+pub fn vm_shutdown(package: &CompiledPackage, volume_root: &Path) -> Result<()> {
+    vm_client(package, volume_root)?.send_command("system_powerdown", None)
+}
+
+pub fn vm_quit(package: &CompiledPackage, volume_root: &Path) -> Result<()> {
+    vm_client(package, volume_root)?.send_command("quit", None)
 }
 
 pub fn generate_vm_command(package: &CompiledPackage, volume_root: &Path) -> Result<Vec<String>> {
@@ -89,7 +116,7 @@ pub fn generate_container_command(
     volume_root: &Path,
 ) -> Result<Vec<String>> {
     let mut cmd = vec![PODMAN_COMMAND.into()];
-    let name = format!("{}-{}", package.title.name, package.title.version);
+    let name = package.title.to_string();
     cmd.append(&mut vec!["--name".into(), name]);
 
     if let Some(hostname) = &package.networking.hostname {
