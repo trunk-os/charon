@@ -20,13 +20,13 @@ pub fn generate_vm_command(
 ) -> Result<Vec<String>> {
     let mut cmd = vec![QEMU_COMMAND.to_string()];
 
-    let mut fwdrules = Vec::new();
+    let mut fwdrules = String::new();
     for (host, guest) in &package.networking.forward_ports {
-        fwdrules.push(format!(",hostfwd=tcp:0.0.0.0:{}-:{}", host, guest));
+        fwdrules.push_str(&format!(",hostfwd=tcp:0.0.0.0:{}-:{}", host, guest));
     }
 
     for (host, guest) in &package.networking.expose_ports {
-        fwdrules.push(format!(",hostfwd=tcp:0.0.0.0:{}-:{}", host, guest));
+        fwdrules.push_str(&format!(",hostfwd=tcp:0.0.0.0:{}-:{}", host, guest));
     }
 
     cmd.append(&mut vec![
@@ -52,7 +52,7 @@ pub fn generate_vm_command(
             package.resources.cpus, package.resources.cpus, package.resources.cpus
         ),
         "-nic".into(),
-        format!("user{}", fwdrules.join("")),
+        format!("user{}", fwdrules),
     ]);
 
     cmd.push("-drive".into());
