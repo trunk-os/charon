@@ -15,4 +15,4 @@ tempfile = "*"
 lazy_static = "*"
 
 [features]
-qemu = []
+livetests = []

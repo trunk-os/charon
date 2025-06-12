@@ -1,7 +1,5 @@
-use crate::{
-    cli::{PODMAN_COMMAND, QEMU_COMMAND},
-    *,
-};
+use super::*;
+use crate::*;
 use anyhow::Result;
 
 fn string_vec(v: Vec<&str>) -> Vec<String> {
@@ -10,6 +8,24 @@ fn string_vec(v: Vec<&str>) -> Vec<String> {
 
 fn load(registry: &Registry, name: &str, version: &str) -> Result<CompiledPackage> {
     registry.load(name, version)?.compile()
+}
+
+#[cfg(feature = "livetests")]
+mod livetests {
+    // use super::*;
+    //
+    // #[test]
+    // fn launch_qemu() {
+    //     let registry = Registry::new("testdata/registry".into());
+    //     let args = generate_command(
+    //         load(&registry, "plex-qemu", "0.0.2").unwrap(),
+    //         "testdata/volume-root".into(),
+    //     )
+    //     .unwrap();
+    //     let child = std::process::Command::new(&args[0])
+    //         .args(args.iter().skip(1))
+    //         .spawn();
+    // }
 }
 
 mod cli_generation {
