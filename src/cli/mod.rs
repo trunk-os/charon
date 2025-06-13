@@ -22,6 +22,7 @@ enum DownloadInfo {
     Data(Vec<u8>),
     #[allow(dead_code)]
     ContentType(String),
+    Close,
 }
 
 pub fn download_vm_image(package: &CompiledPackage, volume_root: &Path) -> Result<()> {
@@ -42,6 +43,7 @@ pub fn download_vm_image(package: &CompiledPackage, volume_root: &Path) -> Resul
                 match item {
                     DownloadInfo::Data(data) => f.write_all(&data).unwrap(),
                     DownloadInfo::ContentType(_) => {}
+                    DownloadInfo::Close => return,
                 }
             }
         });
@@ -63,15 +65,21 @@ pub fn download_vm_image(package: &CompiledPackage, volume_root: &Path) -> Resul
 
             true
         })?;
+
+        let s2 = s.clone();
         curl.write_function(move |data| {
-            s.send(DownloadInfo::Data(data.to_vec())).unwrap();
+            s2.send(DownloadInfo::Data(data.to_vec())).unwrap();
             Ok(data.len())
         })?;
-    }
 
-    Err(anyhow!(
-        "source is not a URL; cannot run container images in qemu"
-    ))
+        curl.perform()?;
+        s.send(DownloadInfo::Close)?;
+        Ok(())
+    } else {
+        Err(anyhow!(
+            "source is not a URL; cannot run container images in qemu"
+        ))
+    }
 }
 
 pub fn generate_command(package: CompiledPackage, volume_root: PathBuf) -> Result<Vec<String>> {
