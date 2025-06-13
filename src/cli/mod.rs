@@ -57,7 +57,7 @@ pub fn download_vm_image(package: &CompiledPackage, volume_root: &Path) -> Resul
                 let split: Vec<&str> = header.splitn(2, ":").collect();
                 if split.len() == 2 {
                     if split[0].to_lowercase() == "content-type" {
-                        s2.send(DownloadInfo::ContentType(split[1].to_string()))
+                        s2.send(DownloadInfo::ContentType(split[1].trim().to_string()))
                             .unwrap();
                     }
                 }
