@@ -3,8 +3,12 @@ use crate::{
     CompiledPackage, CompiledSource,
 };
 use anyhow::{anyhow, Result};
-//use curl::easy::Easy;
-use std::path::{Path, PathBuf};
+use curl::easy::Easy;
+use std::{
+    io::Write,
+    path::{Path, PathBuf},
+    sync::mpsc::channel,
+};
 
 #[cfg(test)]
 mod tests;
@@ -14,7 +18,61 @@ const QEMU_COMMAND: &str = "qemu-system-x86_64";
 const QEMU_IMAGE_FILENAME: &str = "image";
 const QEMU_MONITOR_FILENAME: &str = "qemu-monitor";
 
-///pub fn download_vm_image(package: &CompiledPackage, volume_root: &Path) -> Result<()> {}
+enum DownloadInfo {
+    Data(Vec<u8>),
+    #[allow(dead_code)]
+    ContentType(String),
+}
+
+pub fn download_vm_image(package: &CompiledPackage, volume_root: &Path) -> Result<()> {
+    if let CompiledSource::URL(url) = &package.source {
+        // FIXME: all this setup is to facilitate transparent decompression
+        //        which of course is not actually implemented yet
+        let (s, r) = channel();
+        let root = volume_root.to_path_buf();
+        std::thread::spawn(move || {
+            let image_path = root.join(QEMU_IMAGE_FILENAME);
+            let mut f = std::fs::OpenOptions::new()
+                .create(true)
+                .truncate(true)
+                .write(true)
+                .open(&image_path)
+                .unwrap();
+            while let Ok(item) = r.recv() {
+                match item {
+                    DownloadInfo::Data(data) => f.write_all(&data).unwrap(),
+                    DownloadInfo::ContentType(_) => {}
+                }
+            }
+        });
+
+        let mut curl = Easy::new();
+        curl.url(&url)?;
+
+        let s2 = s.clone();
+        curl.header_function(move |header| {
+            if let Ok(header) = String::from_utf8(header.into()) {
+                let split: Vec<&str> = header.splitn(2, ":").collect();
+                if split.len() == 2 {
+                    if split[0].to_lowercase() == "content-type" {
+                        s2.send(DownloadInfo::ContentType(split[1].to_string()))
+                            .unwrap();
+                    }
+                }
+            }
+
+            true
+        })?;
+        curl.write_function(move |data| {
+            s.send(DownloadInfo::Data(data.to_vec())).unwrap();
+            Ok(data.len())
+        })?;
+    }
+
+    Err(anyhow!(
+        "source is not a URL; cannot run container images in qemu"
+    ))
+}
 
 pub fn generate_command(package: CompiledPackage, volume_root: PathBuf) -> Result<Vec<String>> {
     match package.source {
