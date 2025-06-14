@@ -257,7 +257,7 @@ pub fn generate_container_command(
 
     // TODO: cgroups
 
-    cmd.append(&mut vec!["-d".into(), name.into()]);
+    cmd.push(name.into());
 
     Ok(cmd)
 }

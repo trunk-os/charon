@@ -147,13 +147,7 @@ mod cli_generation {
                 "/volume-root".into()
             )
             .unwrap(),
-            string_vec(vec![
-                PODMAN_COMMAND,
-                "--name",
-                "plex-0.0.2",
-                "-d",
-                "scratch"
-            ])
+            string_vec(vec![PODMAN_COMMAND, "--name", "plex-0.0.2", "scratch"])
         );
         assert_eq!(
             generate_command(
@@ -161,13 +155,7 @@ mod cli_generation {
                 "/volume-root".into()
             )
             .unwrap(),
-            string_vec(vec![
-                PODMAN_COMMAND,
-                "--name",
-                "plex-0.0.1",
-                "-d",
-                "scratch"
-            ])
+            string_vec(vec![PODMAN_COMMAND, "--name", "plex-0.0.1", "scratch"])
         );
         assert_eq!(
             generate_command(
@@ -190,7 +178,6 @@ mod cli_generation {
                 "--privileged",
                 "--cap-add",
                 "SYS_ADMIN",
-                "-d",
                 "debian"
             ])
         );
