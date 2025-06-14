@@ -12,7 +12,23 @@ fn load(registry: &Registry, name: &str, version: &str) -> Result<CompiledPackag
 
 #[cfg(feature = "livetests")]
 mod livetests {
-    // use super::*;
+    use tempfile::TempDir;
+
+    use super::*;
+
+    //#[test]
+    // FIXME: this test cannot be run until I can figure out how file:// urls work in curl.
+    // see: https://github.com/alexcrichton/curl-rust/issues/611
+    #[allow(dead_code)]
+    fn test_downloader() {
+        let registry = Registry::new("testdata/registry".into());
+        let pkg = load(&registry, "plex-qemu", "0.0.2").unwrap();
+        let td = TempDir::new().unwrap();
+        let path = td.path();
+        download_vm_image(&pkg, path).unwrap();
+        assert!(std::fs::exists(path.join(QEMU_IMAGE_FILENAME)).unwrap());
+    }
+
     //
     // #[test]
     // fn launch_qemu() {
