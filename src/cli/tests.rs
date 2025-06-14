@@ -12,6 +12,8 @@ fn load(registry: &Registry, name: &str, version: &str) -> Result<CompiledPackag
 
 #[cfg(feature = "livetests")]
 mod livetests {
+    use std::os::unix::process::ExitStatusExt;
+
     use tempfile::TempDir;
 
     use super::*;
@@ -27,6 +29,29 @@ mod livetests {
         let path = td.path();
         download_vm_image(&pkg, path).unwrap();
         assert!(std::fs::exists(path.join(QEMU_IMAGE_FILENAME)).unwrap());
+    }
+
+    #[test]
+    fn launch_podman() {
+        let registry = Registry::new("testdata/registry".into());
+        let td = TempDir::new().unwrap();
+        let path = td.path();
+
+        let args = generate_command(
+            load(&registry, "podman-test", "0.0.2").unwrap(),
+            path.to_path_buf(),
+        )
+        .unwrap();
+
+        let mut child = std::process::Command::new(&args[0])
+            .args(args.iter().skip(1))
+            .spawn()
+            .unwrap();
+
+        assert!(child.id() != 0);
+        assert!(unsafe { libc::kill(child.id() as i32, libc::SIGINT) == 0 });
+        let status = child.wait().unwrap();
+        assert!(status.signal().unwrap() as i32 == libc::SIGINT);
     }
 
     //
