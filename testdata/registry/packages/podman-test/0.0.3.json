@@ -1,10 +1,13 @@
 {
   "title": {
     "name": "podman-test",
-    "version": "0.0.2"
+    "version": "0.0.3"
   },
   "description": "Please modify this description",
   "source": {
-    "container": "docker://debian"
+    "container": "docker://nginx"
+  },
+  "networking": {
+    "forward_ports": [["8000", "80"]]
   }
 }

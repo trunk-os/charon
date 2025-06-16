@@ -12,7 +12,7 @@ fn load(registry: &Registry, name: &str, version: &str) -> Result<CompiledPackag
 
 #[cfg(feature = "livetests")]
 mod livetests {
-    use std::os::unix::process::ExitStatusExt;
+    use std::{os::unix::process::ExitStatusExt, process::Stdio};
 
     use tempfile::TempDir;
 
@@ -31,8 +31,8 @@ mod livetests {
         assert!(std::fs::exists(path.join(QEMU_IMAGE_FILENAME)).unwrap());
     }
 
-    #[test]
-    fn launch_podman() {
+    #[tokio::test]
+    async fn launch_podman() {
         let registry = Registry::new("testdata/registry".into());
         let td = TempDir::new().unwrap();
         let path = td.path();
@@ -52,6 +52,54 @@ mod livetests {
         assert!(unsafe { libc::kill(child.id() as i32, libc::SIGINT) == 0 });
         let status = child.wait().unwrap();
         assert!(status.signal().unwrap() as i32 == libc::SIGINT);
+
+        let args = generate_command(
+            load(&registry, "podman-test", "0.0.3").unwrap(),
+            path.to_path_buf(),
+        )
+        .unwrap();
+
+        std::process::Command::new("podman")
+            .args(vec!["rm", "-f", "podman-test-0.0.3"])
+            .status()
+            .unwrap();
+
+        let mut child = std::process::Command::new(&args[0])
+            .args(args.iter().skip(1))
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap();
+        assert!(child.id() != 0);
+
+        // wait up to 60s for the container to boot by checking the exposed port
+        let start = std::time::Instant::now();
+
+        let mut found = false;
+        'check: while std::time::Instant::now() - start < std::time::Duration::from_secs(60) {
+            match tokio::net::TcpStream::connect("127.0.0.1:8000").await {
+                Ok(_) => {
+                    found = true;
+                    break 'check;
+                }
+                Err(_) => tokio::time::sleep(std::time::Duration::from_secs(1)).await,
+            }
+        }
+
+        assert!(found);
+
+        // request a webpage from the nginx container, should be good
+        let resp = reqwest::get("http://localhost:8000").await.unwrap();
+        assert_eq!(resp.status(), 200);
+
+        std::process::Command::new("podman")
+            .args(vec!["rm", "-f", "podman-test-0.0.3"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .unwrap();
+        let status = child.wait().unwrap();
+        assert!(status.success())
     }
 
     //
@@ -147,7 +195,14 @@ mod cli_generation {
                 "/volume-root".into()
             )
             .unwrap(),
-            string_vec(vec![PODMAN_COMMAND, "--name", "plex-0.0.2", "scratch"])
+            string_vec(vec![
+                PODMAN_COMMAND,
+                "run",
+                "--rm",
+                "--name",
+                "plex-0.0.2",
+                "scratch"
+            ])
         );
         assert_eq!(
             generate_command(
@@ -155,7 +210,14 @@ mod cli_generation {
                 "/volume-root".into()
             )
             .unwrap(),
-            string_vec(vec![PODMAN_COMMAND, "--name", "plex-0.0.1", "scratch"])
+            string_vec(vec![
+                PODMAN_COMMAND,
+                "run",
+                "--rm",
+                "--name",
+                "plex-0.0.1",
+                "scratch"
+            ])
         );
         assert_eq!(
             generate_command(
@@ -165,6 +227,8 @@ mod cli_generation {
             .unwrap(),
             string_vec(vec![
                 PODMAN_COMMAND,
+                "run",
+                "--rm",
                 "--name",
                 "podman-test-0.0.1",
                 "-v",
@@ -178,7 +242,7 @@ mod cli_generation {
                 "--privileged",
                 "--cap-add",
                 "SYS_ADMIN",
-                "debian"
+                "docker://debian"
             ])
         );
     }

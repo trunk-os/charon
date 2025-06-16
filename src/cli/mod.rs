@@ -187,9 +187,9 @@ pub fn generate_container_command(
     package: &CompiledPackage,
     volume_root: &Path,
 ) -> Result<Vec<String>> {
-    let mut cmd = vec![PODMAN_COMMAND.into()];
+    let mut cmd = vec![PODMAN_COMMAND.into(), "run".into()];
     let name = package.title.to_string();
-    cmd.append(&mut vec!["--name".into(), name]);
+    cmd.append(&mut vec!["--rm".into(), "--name".into(), name]);
 
     if let Some(hostname) = &package.networking.hostname {
         cmd.append(&mut vec!["--hostname".into(), hostname.clone()]);

@@ -219,8 +219,10 @@ impl Default for CompiledSource {
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Networking {
-    pub forward_ports: Vec<(TemplatedInput<u16>, TemplatedInput<u16>)>,
-    pub expose_ports: Vec<(TemplatedInput<u16>, TemplatedInput<u16>)>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub forward_ports: Option<Vec<(TemplatedInput<u16>, TemplatedInput<u16>)>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expose_ports: Option<Vec<(TemplatedInput<u16>, TemplatedInput<u16>)>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub internal_network: Option<TemplatedInput<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -235,19 +237,23 @@ impl Networking {
         responses: &PromptResponses,
     ) -> Result<CompiledNetworking> {
         let mut forward_ports = Vec::new();
-        for port in &self.forward_ports {
-            forward_ports.push((
-                port.0.output(globals, prompts, responses)?,
-                port.1.output(globals, prompts, responses)?,
-            ));
+        if let Some(fp) = &self.forward_ports {
+            for port in fp {
+                forward_ports.push((
+                    port.0.output(globals, prompts, responses)?,
+                    port.1.output(globals, prompts, responses)?,
+                ));
+            }
         }
 
         let mut expose_ports = Vec::new();
-        for port in &self.expose_ports {
-            expose_ports.push((
-                port.0.output(globals, prompts, responses)?,
-                port.1.output(globals, prompts, responses)?,
-            ));
+        if let Some(ep) = &self.expose_ports {
+            for port in ep {
+                expose_ports.push((
+                    port.0.output(globals, prompts, responses)?,
+                    port.1.output(globals, prompts, responses)?,
+                ));
+            }
         }
 
         let internal_network = if let Some(internal_network) = self
