@@ -29,7 +29,7 @@ impl SystemdUnit {
     }
 
     pub fn filename(&self) -> PathBuf {
-        format!("/{}/{}.service", SYSTEMD_SERVICE_ROOT, self.package.title).into()
+        format!("{}/{}.service", SYSTEMD_SERVICE_ROOT, self.package.title).into()
     }
 
     pub fn unit(&self, registry_path: PathBuf, volume_root: PathBuf) -> Result<String> {
