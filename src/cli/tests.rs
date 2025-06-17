@@ -29,6 +29,16 @@ mod livetests {
         // it should be as big as a machine image, this is
         // lower than the size of the current image in the makefile
         assert!(md.size() > 240 * 1024 * 1024);
+
+        // just a file over http. this should be small and accessible.
+        download_vm_image(
+            "https://raw.githubusercontent.com/curl/curl/refs/heads/master/lib/file.c",
+            path.to_path_buf(),
+        )
+        .unwrap();
+        let md = path.metadata().unwrap();
+        assert!(md.size() < 1024 * 1024);
+        assert!(md.size() > 1024);
     }
 
     #[tokio::test]
