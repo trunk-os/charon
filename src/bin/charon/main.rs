@@ -91,7 +91,7 @@ fn main() -> Result<()> {
             let status = std::process::Command::new(&command[0])
                 .args(command.iter().skip(1))
                 .status()?;
-            std::process::exit(status.code().unwrap());
+            std::process::exit(status.code().unwrap_or_default());
         }
         Commands::Stop(s_args) => {
             let r = Registry::new(args.registry_path.clone().unwrap_or(cwd.clone()));
