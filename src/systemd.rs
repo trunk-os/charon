@@ -48,6 +48,7 @@ impl SystemdUnit {
                         "REGISTRY_PATH" => out.push_str(registry_path.to_str().unwrap_or_default()),
                         _ => return Err(anyhow!("invalid template variable '{}'", variable)),
                     };
+                    variable = String::new();
 
                     false
                 } else {
@@ -61,5 +62,50 @@ impl SystemdUnit {
         }
 
         Ok(out)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{CompiledPackage, Registry};
+    use anyhow::Result;
+    use tempfile::TempDir;
+
+    use super::SystemdUnit;
+
+    fn load(registry: &Registry, name: &str, version: &str) -> Result<CompiledPackage> {
+        registry.load(name, version)?.compile()
+    }
+
+    #[test]
+    fn unit() {
+        let registry = Registry::new("testdata/registry".into());
+        let td = TempDir::new().unwrap();
+        let path = td.path();
+        let pkg = load(&registry, "podman-test", "0.0.2").unwrap();
+        let unit = SystemdUnit::new(pkg);
+        let text = unit
+            .unit("testdata/registry".into(), path.to_path_buf())
+            .unwrap();
+        assert_eq!(
+            text,
+            format!(
+                r#"
+[Unit]
+Description=Charon launcher for podman-test, version 0.0.2
+After= # FIXME: this needs to follow the trunk microservices boot
+
+[Service]
+ExecStart=/usr/bin/charon -r testdata/registry launch podman-test 0.0.2 {}
+ExecStop=/usr/bin/charon -r testdata/registry stop podman-test 0.0.2 {}
+Restart=always
+
+[Install]
+Alias=podman-test-0.0.2.service
+"#,
+                path.display(),
+                path.display()
+            )
+        );
     }
 }
