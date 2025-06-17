@@ -37,6 +37,8 @@ mod livetests {
         )
         .unwrap();
         let md = path.metadata().unwrap();
+        // this check ensures we downloaded something new to the same path, truncating it, by
+        // making sure it's small.
         assert!(md.size() < 1024 * 1024);
         assert!(md.size() > 1024);
     }
