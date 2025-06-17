@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use charon::{Global, GlobalRegistry, PackageTitle, Registry, SourcePackage};
+use charon::{generate_command, Global, GlobalRegistry, PackageTitle, Registry, SourcePackage};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug, Clone)]
@@ -17,6 +17,15 @@ struct MainArgs {
 enum Commands {
     NewPackage(NewPackageArgs),
     RemovePackage(RemovePackageArgs),
+    Launch(LaunchArgs),
+}
+
+#[derive(Parser, Debug, Clone)]
+#[command(version, about="Launch a package", long_about=None)]
+struct LaunchArgs {
+    package_name: String,
+    package_version: String,
+    volume_root: PathBuf,
 }
 
 #[derive(Parser, Debug, Clone)]
@@ -59,6 +68,19 @@ fn main() -> Result<()> {
             let gr = GlobalRegistry::new(args.registry_path.unwrap_or(cwd));
             r.remove(&rp_args.name)?;
             gr.remove(&rp_args.name)?;
+        }
+        Commands::Launch(l_args) => {
+            let r = Registry::new(args.registry_path.clone().unwrap_or(cwd.clone()));
+            let command = generate_command(
+                r.load(&l_args.package_name, &l_args.package_version)?
+                    .compile()?,
+                l_args.volume_root,
+            )?;
+
+            let status = std::process::Command::new(&command[0])
+                .args(command.iter().skip(1))
+                .status()?;
+            std::process::exit(status.code().unwrap());
         }
     }
 
