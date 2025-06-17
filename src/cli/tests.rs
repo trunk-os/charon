@@ -65,16 +65,10 @@ mod livetests {
         let status = child.wait().unwrap();
         assert!(status.signal().unwrap() as i32 == libc::SIGINT);
 
-        let args = generate_command(
-            load(&registry, "podman-test", "0.0.3").unwrap(),
-            path.to_path_buf(),
-        )
-        .unwrap();
+        let pkg = load(&registry, "podman-test", "0.0.3").unwrap();
+        let args = generate_command(pkg.clone(), path.to_path_buf()).unwrap();
 
-        std::process::Command::new("podman")
-            .args(vec!["rm", "-f", "podman-test-0.0.3"])
-            .status()
-            .unwrap();
+        let _ = stop_package(pkg.clone(), path.to_path_buf());
 
         let mut child = std::process::Command::new(&args[0])
             .args(args.iter().skip(1))
@@ -104,12 +98,7 @@ mod livetests {
         let resp = reqwest::get("http://localhost:8000").await.unwrap();
         assert_eq!(resp.status(), 200);
 
-        std::process::Command::new("podman")
-            .args(vec!["rm", "-f", "podman-test-0.0.3"])
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .unwrap();
+        stop_package(pkg, path.to_path_buf()).unwrap();
         let status = child.wait().unwrap();
         assert!(status.success())
     }

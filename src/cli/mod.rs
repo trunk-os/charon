@@ -4,7 +4,7 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use curl::easy::Easy;
-use std::io::Read;
+use std::{io::Read, process::Stdio};
 use std::{
     io::Write,
     path::{Path, PathBuf},
@@ -24,6 +24,30 @@ enum DownloadInfo {
     #[allow(dead_code)]
     ContentType(String),
     Close,
+}
+
+pub fn generate_command(package: CompiledPackage, volume_root: PathBuf) -> Result<Vec<String>> {
+    match package.source {
+        CompiledSource::URL(_) => generate_vm_command(&package, &volume_root),
+        CompiledSource::Container(_) => generate_container_command(&package, &volume_root),
+    }
+}
+
+pub fn stop_package(package: CompiledPackage, volume_root: PathBuf) -> Result<()> {
+    match package.source {
+        CompiledSource::URL(_) => vm_shutdown(&package, &volume_root),
+        CompiledSource::Container(_) => container_shutdown(&package, &volume_root),
+    }
+}
+
+pub fn container_shutdown(package: &CompiledPackage, _: &Path) -> Result<()> {
+    std::process::Command::new(PODMAN_COMMAND)
+        .args(vec!["rm", "-f", &package.title.to_string()])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .unwrap();
+    Ok(())
 }
 
 pub fn download_vm_image(u: &str, target: PathBuf) -> Result<()> {
@@ -114,13 +138,6 @@ pub fn download_vm_image(u: &str, target: PathBuf) -> Result<()> {
     s.send(DownloadInfo::Close)?;
     close_r.recv()??; // this'll catch any error from the thread spawned
     Ok(())
-}
-
-pub fn generate_command(package: CompiledPackage, volume_root: PathBuf) -> Result<Vec<String>> {
-    match package.source {
-        CompiledSource::URL(_) => generate_vm_command(&package, &volume_root),
-        CompiledSource::Container(_) => generate_container_command(&package, &volume_root),
-    }
 }
 
 fn vm_client(package: &CompiledPackage, volume_root: &Path) -> Result<Client> {
