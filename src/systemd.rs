@@ -10,8 +10,8 @@ Description=Charon launcher for @PACKAGE_NAME@, version @PACKAGE_VERSION@
 After= # FIXME: this needs to follow the trunk microservices boot
 
 [Service]
-ExecStart=/usr/bin/charon -r @REGISTRY@ launch @PACKAGE_NAME@ @PACKAGE_VERSION@ @VOLUME_ROOT@
-ExecStop=/usr/bin/charon -r @REGISTRY@ stop @PACKAGE_NAME@ @PACKAGE_VERSION@ @VOLUME_ROOT@
+ExecStart=/usr/bin/charon -r @REGISTRY_PATH@ launch @PACKAGE_NAME@ @PACKAGE_VERSION@ @VOLUME_ROOT@
+ExecStop=/usr/bin/charon -r @REGISTRY_PATH@ stop @PACKAGE_NAME@ @PACKAGE_VERSION@ @VOLUME_ROOT@
 Restart=always
 
 [Install]
@@ -32,7 +32,7 @@ impl SystemdUnit {
         format!("/{}/{}.service", SYSTEMD_SERVICE_ROOT, self.package.title).into()
     }
 
-    pub fn unit(&self, volume_root: PathBuf) -> Result<String> {
+    pub fn unit(&self, registry_path: PathBuf, volume_root: PathBuf) -> Result<String> {
         let mut out = String::new();
         let mut variable = String::new();
         let mut in_variable = false;
@@ -45,6 +45,7 @@ impl SystemdUnit {
                         "PACKAGE_VERSION" => out.push_str(&self.package.title.version),
                         "PACKAGE_FILENAME" => out.push_str(&self.package.title.to_string()),
                         "VOLUME_ROOT" => out.push_str(volume_root.to_str().unwrap_or_default()),
+                        "REGISTRY_PATH" => out.push_str(registry_path.to_str().unwrap_or_default()),
                         _ => return Err(anyhow!("invalid template variable '{}'", variable)),
                     }
                     false
