@@ -4,6 +4,7 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use curl::easy::Easy;
+use std::io::Read;
 use std::{
     io::Write,
     path::{Path, PathBuf},
@@ -26,7 +27,9 @@ enum DownloadInfo {
 }
 
 pub fn download_vm_image(package: &CompiledPackage, volume_root: &Path) -> Result<()> {
-    if let CompiledSource::URL(url) = &package.source {
+    if let CompiledSource::URL(u) = &package.source {
+        let parsed: url::Url = u.parse()?;
+
         // FIXME: all this setup is to facilitate transparent decompression
         //        which of course is not actually implemented yet
         let (s, r) = channel();
@@ -48,31 +51,42 @@ pub fn download_vm_image(package: &CompiledPackage, volume_root: &Path) -> Resul
             }
         });
 
-        let mut curl = Easy::new();
-        curl.url(&url)?;
+        // use a special method for file urls; curl doesn't support them currently
+        // https://github.com/alexcrichton/curl-rust/issues/611 tracks this issue.
+        if parsed.scheme() == "file" {
+            let mut f = std::fs::OpenOptions::new().read(true).open(parsed.path())?;
+            let mut buf: [u8; 4096] = [0u8; 4096];
+            while let Ok(size) = f.read(&mut buf) {
+                s.send(DownloadInfo::Data(buf[..size].to_vec())).unwrap();
+            }
+        } else {
+            let mut curl = Easy::new();
+            curl.url(&u)?;
 
-        let s2 = s.clone();
-        curl.header_function(move |header| {
-            if let Ok(header) = String::from_utf8(header.into()) {
-                let split: Vec<&str> = header.splitn(2, ":").collect();
-                if split.len() == 2 {
-                    if split[0].to_lowercase() == "content-type" {
-                        s2.send(DownloadInfo::ContentType(split[1].trim().to_string()))
-                            .unwrap();
+            let s2 = s.clone();
+            curl.header_function(move |header| {
+                if let Ok(header) = String::from_utf8(header.into()) {
+                    let split: Vec<&str> = header.splitn(2, ":").collect();
+                    if split.len() == 2 {
+                        if split[0].to_lowercase() == "content-type" {
+                            s2.send(DownloadInfo::ContentType(split[1].trim().to_string()))
+                                .unwrap();
+                        }
                     }
                 }
-            }
 
-            true
-        })?;
+                true
+            })?;
 
-        let s2 = s.clone();
-        curl.write_function(move |data| {
-            s2.send(DownloadInfo::Data(data.to_vec())).unwrap();
-            Ok(data.len())
-        })?;
+            let s2 = s.clone();
+            curl.write_function(move |data| {
+                s2.send(DownloadInfo::Data(data.to_vec())).unwrap();
+                Ok(data.len())
+            })?;
 
-        curl.perform()?;
+            curl.perform()?;
+        }
+
         s.send(DownloadInfo::Close)?;
         Ok(())
     } else {
