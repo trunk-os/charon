@@ -1,7 +1,9 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use charon::{generate_command, Global, GlobalRegistry, PackageTitle, Registry, SourcePackage};
+use charon::{
+    generate_command, stop_package, Global, GlobalRegistry, PackageTitle, Registry, SourcePackage,
+};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug, Clone)]
@@ -18,11 +20,20 @@ enum Commands {
     NewPackage(NewPackageArgs),
     RemovePackage(RemovePackageArgs),
     Launch(LaunchArgs),
+    Stop(StopArgs),
 }
 
 #[derive(Parser, Debug, Clone)]
 #[command(version, about="Launch a package", long_about=None)]
 struct LaunchArgs {
+    package_name: String,
+    package_version: String,
+    volume_root: PathBuf,
+}
+
+#[derive(Parser, Debug, Clone)]
+#[command(version, about="Stop a running package", long_about=None)]
+struct StopArgs {
     package_name: String,
     package_version: String,
     volume_root: PathBuf,
@@ -81,6 +92,14 @@ fn main() -> Result<()> {
                 .args(command.iter().skip(1))
                 .status()?;
             std::process::exit(status.code().unwrap());
+        }
+        Commands::Stop(s_args) => {
+            let r = Registry::new(args.registry_path.clone().unwrap_or(cwd.clone()));
+            stop_package(
+                r.load(&s_args.package_name, &s_args.package_version)?
+                    .compile()?,
+                s_args.volume_root,
+            )?;
         }
     }
 
