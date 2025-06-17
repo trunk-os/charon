@@ -78,7 +78,17 @@ mod tests {
     }
 
     #[test]
-    fn unit() {
+    fn unit_filename() {
+        let registry = Registry::new("testdata/registry".into());
+        let unit = SystemdUnit::new(load(&registry, "podman-test", "0.0.2").unwrap());
+        assert_eq!(
+            unit.filename().as_os_str(),
+            "/etc/systemd/system/podman-test-0.0.2.service"
+        );
+    }
+
+    #[test]
+    fn unit_contents() {
         let registry = Registry::new("testdata/registry".into());
         let td = TempDir::new().unwrap();
         let path = td.path();
