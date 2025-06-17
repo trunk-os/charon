@@ -47,7 +47,8 @@ impl SystemdUnit {
                         "VOLUME_ROOT" => out.push_str(volume_root.to_str().unwrap_or_default()),
                         "REGISTRY_PATH" => out.push_str(registry_path.to_str().unwrap_or_default()),
                         _ => return Err(anyhow!("invalid template variable '{}'", variable)),
-                    }
+                    };
+
                     false
                 } else {
                     true
