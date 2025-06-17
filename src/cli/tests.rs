@@ -12,23 +12,23 @@ fn load(registry: &Registry, name: &str, version: &str) -> Result<CompiledPackag
 
 #[cfg(feature = "livetests")]
 mod livetests {
-    use std::{os::unix::process::ExitStatusExt, process::Stdio};
-
-    use tempfile::TempDir;
-
     use super::*;
+    use std::{
+        os::unix::{fs::MetadataExt, process::ExitStatusExt},
+        process::Stdio,
+    };
+    use tempfile::{NamedTempFile, TempDir};
 
-    //#[test]
-    // FIXME: this test cannot be run until I can figure out how file:// urls work in curl.
-    // see: https://github.com/alexcrichton/curl-rust/issues/611
-    #[allow(dead_code)]
+    #[test]
     fn test_downloader() {
-        let registry = Registry::new("testdata/registry".into());
-        let pkg = load(&registry, "plex-qemu", "0.0.2").unwrap();
-        let td = TempDir::new().unwrap();
-        let path = td.path();
-        download_vm_image(&pkg, path).unwrap();
-        assert!(std::fs::exists(path.join(QEMU_IMAGE_FILENAME)).unwrap());
+        let tf = NamedTempFile::new().unwrap();
+        let path = tf.path();
+
+        download_vm_image("file://testdata/ubuntu.img", path.to_path_buf()).unwrap();
+        let md = path.metadata().unwrap();
+        // it should be as big as a machine image, this is
+        // lower than the size of the current image in the makefile
+        assert!(md.size() > 240 * 1024 * 1024);
     }
 
     #[tokio::test]

@@ -26,74 +26,94 @@ enum DownloadInfo {
     Close,
 }
 
-pub fn download_vm_image(package: &CompiledPackage, volume_root: &Path) -> Result<()> {
-    if let CompiledSource::URL(u) = &package.source {
-        let parsed: url::Url = u.parse()?;
+pub fn download_vm_image(u: &str, target: PathBuf) -> Result<()> {
+    let parsed: url::Url = u.parse()?;
 
-        // FIXME: all this setup is to facilitate transparent decompression
-        //        which of course is not actually implemented yet
-        let (s, r) = channel();
-        let root = volume_root.to_path_buf();
-        std::thread::spawn(move || {
-            let image_path = root.join(QEMU_IMAGE_FILENAME);
-            let mut f = std::fs::OpenOptions::new()
-                .create(true)
-                .truncate(true)
-                .write(true)
-                .open(&image_path)
-                .unwrap();
-            while let Ok(item) = r.recv() {
-                match item {
-                    DownloadInfo::Data(data) => f.write_all(&data).unwrap(),
-                    DownloadInfo::ContentType(_) => {}
-                    DownloadInfo::Close => return,
+    // FIXME: all this setup is to facilitate transparent decompression
+    //        which of course is not actually implemented yet
+    let (s, r) = channel();
+    let (close_s, close_r) = channel::<Result<()>>();
+    std::thread::spawn(move || {
+        let mut f = match std::fs::OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(&target)
+        {
+            Ok(f) => f,
+            Err(e) => {
+                close_s.send(Err(anyhow!(e))).unwrap();
+                return;
+            }
+        };
+
+        while let Ok(item) = r.recv() {
+            match item {
+                DownloadInfo::Data(data) => match f.write_all(&data) {
+                    Err(e) => {
+                        close_s.send(Err(anyhow!(e))).unwrap();
+                        return;
+                    }
+                    _ => {}
+                },
+                DownloadInfo::ContentType(_) => {}
+                DownloadInfo::Close => {
+                    close_s.send(Ok(())).unwrap();
+                    return;
                 }
             }
-        });
+        }
+    });
 
-        // use a special method for file urls; curl doesn't support them currently
-        // https://github.com/alexcrichton/curl-rust/issues/611 tracks this issue.
-        if parsed.scheme() == "file" {
-            let mut f = std::fs::OpenOptions::new().read(true).open(parsed.path())?;
-            let mut buf: [u8; 4096] = [0u8; 4096];
-            while let Ok(size) = f.read(&mut buf) {
-                s.send(DownloadInfo::Data(buf[..size].to_vec())).unwrap();
+    // use a special method for file urls; curl doesn't support them currently
+    // https://github.com/alexcrichton/curl-rust/issues/611 tracks this issue.
+    if parsed.scheme() == "file" {
+        // apparently the url library thinks the first path component of file:// is the host.
+        // sigh.
+        let mut f = std::fs::OpenOptions::new().read(true).open(&format!(
+            "{}{}",
+            parsed.host().unwrap(),
+            parsed.path()
+        ))?;
+        let mut buf: [u8; 4096] = [0u8; 4096];
+        loop {
+            let size = f.read(&mut buf)?;
+            if size == 0 {
+                break;
             }
-        } else {
-            let mut curl = Easy::new();
-            curl.url(&u)?;
+            s.send(DownloadInfo::Data(buf[..size].to_vec())).unwrap();
+        }
+    } else {
+        let mut curl = Easy::new();
+        curl.url(&u)?;
 
-            let s2 = s.clone();
-            curl.header_function(move |header| {
-                if let Ok(header) = String::from_utf8(header.into()) {
-                    let split: Vec<&str> = header.splitn(2, ":").collect();
-                    if split.len() == 2 {
-                        if split[0].to_lowercase() == "content-type" {
-                            s2.send(DownloadInfo::ContentType(split[1].trim().to_string()))
-                                .unwrap();
-                        }
+        let s2 = s.clone();
+        curl.header_function(move |header| {
+            if let Ok(header) = String::from_utf8(header.into()) {
+                let split: Vec<&str> = header.splitn(2, ":").collect();
+                if split.len() == 2 {
+                    if split[0].to_lowercase() == "content-type" {
+                        s2.send(DownloadInfo::ContentType(split[1].trim().to_string()))
+                            .unwrap();
                     }
                 }
+            }
 
-                true
-            })?;
+            true
+        })?;
 
-            let s2 = s.clone();
-            curl.write_function(move |data| {
-                s2.send(DownloadInfo::Data(data.to_vec())).unwrap();
-                Ok(data.len())
-            })?;
+        let s2 = s.clone();
+        curl.write_function(move |data| {
+            s2.send(DownloadInfo::Data(data.to_vec())).unwrap();
+            Ok(data.len())
+        })?;
 
-            curl.perform()?;
-        }
-
-        s.send(DownloadInfo::Close)?;
-        Ok(())
-    } else {
-        Err(anyhow!(
-            "source is not a URL; cannot run container images in qemu"
-        ))
+        curl.perform()?;
     }
+
+    s.send(DownloadInfo::Close)?;
+    close_r.recv()??; // this'll catch any error from the thread spawned
+    Ok(())
 }
 
 pub fn generate_command(package: CompiledPackage, volume_root: PathBuf) -> Result<Vec<String>> {
