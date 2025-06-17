@@ -1,6 +1,7 @@
 use crate::CompiledPackage;
 use anyhow::{anyhow, Result};
 use std::path::PathBuf;
+use zbus_systemd::{systemd1::ManagerProxy, zbus::Connection};
 
 const SYSTEMD_SERVICE_ROOT: &str = "/etc/systemd/system";
 
@@ -17,6 +18,11 @@ Restart=always
 [Install]
 Alias=@PACKAGE_FILENAME@.service
 "#;
+
+pub async fn reload_systemd() -> Result<()> {
+    let mgr = ManagerProxy::new(&Connection::system().await?).await?;
+    Ok(mgr.reload().await?)
+}
 
 #[derive(Debug, Clone)]
 pub struct SystemdUnit {
