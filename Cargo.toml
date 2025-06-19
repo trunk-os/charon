@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 serde = { version = "*", features = [ "derive" ] }
 serde_json = "*"
+serde_yaml_ng = "*"
 git2 = { version = "*", features = [ "https" ] }
 anyhow = "*"
 clap = { version = "*", features = [ "derive" ] }
