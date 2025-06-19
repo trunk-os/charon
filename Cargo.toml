@@ -18,6 +18,9 @@ tonic = "*"
 prost = "*"
 tracing = { version = "*", features = [ "log" ] }
 tracing-subscriber = "*"
+tokio-stream = "*"
+tonic-middleware = "*"
+http = "*"
 
 [dev-dependencies]
 tempfile = "*"
