@@ -1,10 +1,11 @@
-use std::path::PathBuf;
-
 use anyhow::Result;
 use charon::{
     generate_command, stop_package, Global, GlobalRegistry, PackageTitle, Registry, SourcePackage,
+    SystemdUnit,
 };
 use clap::{Parser, Subcommand};
+use std::io::Write;
+use std::path::PathBuf;
 
 #[derive(Parser, Debug, Clone)]
 #[command(version, about="CLI to the Charon Packaging System", long_about=None)]
@@ -21,10 +22,19 @@ enum Commands {
     RemovePackage(RemovePackageArgs),
     Launch(LaunchArgs),
     Stop(StopArgs),
+    CreateUnit(CreateUnitArgs),
 }
 
 #[derive(Parser, Debug, Clone)]
-#[command(version, about="Launch a package", long_about=None)]
+#[command(about="Create a systemd unit from a package", long_about=None)]
+struct CreateUnitArgs {
+    package_name: String,
+    package_version: String,
+    volume_root: PathBuf,
+}
+
+#[derive(Parser, Debug, Clone)]
+#[command(about="Launch a package", long_about=None)]
 struct LaunchArgs {
     package_name: String,
     package_version: String,
@@ -32,7 +42,7 @@ struct LaunchArgs {
 }
 
 #[derive(Parser, Debug, Clone)]
-#[command(version, about="Stop a running package", long_about=None)]
+#[command(about="Stop a running package", long_about=None)]
 struct StopArgs {
     package_name: String,
     package_version: String,
@@ -40,14 +50,14 @@ struct StopArgs {
 }
 
 #[derive(Parser, Debug, Clone)]
-#[command(version, about="Create a new Package Registry", long_about=None)]
+#[command(about="Create a new Package, creating the registry if necessary", long_about=None)]
 struct NewPackageArgs {
     name: String,
     initial_version: String,
 }
 
 #[derive(Parser, Debug, Clone)]
-#[command(version, about="Remove a package completely from the registry", long_about=None)]
+#[command(about="Remove a package completely from the registry", long_about=None)]
 struct RemovePackageArgs {
     name: String,
 }
@@ -100,6 +110,32 @@ fn main() -> Result<()> {
                     .compile()?,
                 s_args.volume_root,
             )?;
+        }
+        Commands::CreateUnit(cu_args) => {
+            let r = Registry::new(args.registry_path.clone().unwrap_or(cwd.clone()));
+            let systemd = SystemdUnit::new(
+                r.load(&cu_args.package_name, &cu_args.package_version)?
+                    .compile()?,
+            );
+
+            let mut f = std::fs::OpenOptions::new()
+                .create(true)
+                .truncate(true)
+                .write(true)
+                .open(systemd.filename())?;
+            f.write_all(
+                systemd
+                    .unit(
+                        args.registry_path.unwrap_or(cwd.clone()),
+                        cu_args.volume_root,
+                    )?
+                    .as_bytes(),
+            )?;
+
+            println!(
+                "Wrote unit to '{}'. Please reload systemd to take effect.",
+                systemd.filename().display()
+            );
         }
     }
 
