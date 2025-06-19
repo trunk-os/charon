@@ -13,12 +13,19 @@ curl = "*"
 url = "*"
 zbus_systemd = { version = "*", features = [ "systemd1" ] }
 tokio = { version = "*", features = [ "full" ] }
+tonic = "*"
+prost = "*"
+tracing = { version = "*", features = [ "log" ] }
+tracing-subscriber = "*"
 
 [dev-dependencies]
 tempfile = "*"
 lazy_static = "*"
 libc = "*"
 reqwest = "*"
+
+[build-dependencies]
+tonic-build = "*"
 
 [features]
 livetests = [ ]
