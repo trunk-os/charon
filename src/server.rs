@@ -12,6 +12,10 @@ pub struct Server {
 }
 
 impl Server {
+    pub fn new(config: Config) -> Self {
+        Self { config }
+    }
+
     pub fn start(
         &self,
     ) -> anyhow::Result<impl std::future::Future<Output = Result<(), tonic::transport::Error>>>

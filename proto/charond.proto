@@ -5,3 +5,40 @@ package charond;
 service Status {
   rpc Ping (google.protobuf.Empty) returns (google.protobuf.Empty);
 }
+
+message ProtoPackageTitleWithRoot {
+  string name        = 1;
+  string version     = 2;
+  string volume_root = 3;
+}
+
+service Operations {
+  rpc Launch(ProtoPackageTitleWithRoot) returns (google.protobuf.Empty);
+  rpc Stop(ProtoPackageTitleWithRoot)   returns (google.protobuf.Empty);
+}
+
+message ProtoPackageTitle {
+  string name        = 1;
+  string version     = 2;
+}
+
+message ProtoPrompts {
+  repeated ProtoPrompt prompts = 1;
+}
+
+message ProtoPrompt {
+  string    template   = 1;
+  string    question   = 2;
+  ProtoType input_type = 3;
+}
+
+enum ProtoType {
+    Integer       = 0;
+    SignedInteger = 1;
+    String        = 2;
+    Boolean       = 3;
+}
+
+service Query {
+  rpc GetPrompts(ProtoPackageTitle) returns (ProtoPrompts);
+}
