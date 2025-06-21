@@ -155,7 +155,7 @@ pub struct Prompt {
 }
 
 #[derive(Debug, Clone, Eq, Default, PartialEq, Serialize, Deserialize)]
-pub struct PromptCollection(Vec<Prompt>);
+pub struct PromptCollection(pub Vec<Prompt>);
 
 impl PromptCollection {
     pub fn to_vec(&self) -> Vec<Prompt> {

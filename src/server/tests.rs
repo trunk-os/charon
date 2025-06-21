@@ -42,3 +42,15 @@ async fn test_write_unit() {
         .await
         .unwrap()
 }
+
+#[tokio::test]
+async fn test_get_prompts() {
+    let client = Client::new(start_server().await.to_path_buf()).unwrap();
+    client
+        .control()
+        .await
+        .unwrap()
+        .write_unit("podman-test", "0.0.2", "/tmp/volroot".into())
+        .await
+        .unwrap()
+}
