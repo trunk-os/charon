@@ -1,10 +1,10 @@
 use crate::{
     control_server::{Control, ControlServer},
+    query_server::{Query, QueryServer},
     reload_systemd,
     status_server::{Status, StatusServer},
-    SystemdUnit,
+    Config, ProtoName, ProtoPackageTitleWithRoot, ProtoPromptResponses, ProtoPrompts, SystemdUnit,
 };
-use crate::{Config, ProtoPackageTitleWithRoot};
 use std::os::unix::fs::PermissionsExt;
 use std::{fs::Permissions, io::Write};
 use tonic::{body::Body, transport::Server as TransportServer, Result};
@@ -44,6 +44,7 @@ impl Server {
             .layer(MiddlewareLayer::new(LogMiddleware))
             .add_service(StatusServer::new(self.clone()))
             .add_service(ControlServer::new(self.clone()))
+            .add_service(QueryServer::new(self.clone()))
             .serve_with_incoming(uds_stream))
     }
 }
@@ -95,6 +96,23 @@ impl Control for Server {
         }
 
         Ok(tonic::Response::new(()))
+    }
+}
+
+#[tonic::async_trait]
+impl Query for Server {
+    async fn get_prompts(
+        &self,
+        _name: tonic::Request<ProtoName>,
+    ) -> Result<tonic::Response<ProtoPrompts>> {
+        Ok(tonic::Response::new(Default::default()))
+    }
+
+    async fn set_responses(
+        &self,
+        _responses: tonic::Request<ProtoPromptResponses>,
+    ) -> Result<tonic::Response<()>> {
+        Ok(tonic::Response::new(Default::default()))
     }
 }
 
