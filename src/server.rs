@@ -1,13 +1,14 @@
 use crate::{
     control_server::{Control, ControlServer},
     status_server::{Status, StatusServer},
+    SystemdUnit,
 };
 use crate::{Config, ProtoPackageTitleWithRoot};
-use std::fs::Permissions;
 use std::os::unix::fs::PermissionsExt;
+use std::{fs::Permissions, io::Write};
 use tonic::{body::Body, transport::Server as TransportServer, Result};
 use tonic_middleware::{Middleware, MiddlewareLayer, ServiceBound};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 #[derive(Debug, Clone)]
 pub struct Server {
@@ -57,8 +58,36 @@ impl Status for Server {
 impl Control for Server {
     async fn write_unit(
         &self,
-        _: tonic::Request<ProtoPackageTitleWithRoot>,
+        title: tonic::Request<ProtoPackageTitleWithRoot>,
     ) -> Result<tonic::Response<()>> {
+        let r = self.config.registry();
+        let title = title.into_inner();
+
+        let pkg = r
+            .load(&title.name, &title.version)
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?
+            .compile()
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+
+        let unit = SystemdUnit::new(pkg);
+        if !self.config.debug() {
+            let mut f = std::fs::OpenOptions::new()
+                .create(true)
+                .truncate(true)
+                .write(true)
+                .open(&unit.filename())
+                .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+            f.write_all(
+                unit.unit(r.path(), title.volume_root.into())
+                    .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?
+                    .as_bytes(),
+            )
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+            info!("Wrote unit to {}", unit.filename().display());
+        } else {
+            warn!("debug mode in effect; not writing unit file");
+        }
+
         Ok(tonic::Response::new(()))
     }
 }

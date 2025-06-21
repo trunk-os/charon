@@ -454,6 +454,10 @@ impl Registry {
         Self { root }
     }
 
+    pub fn path(&self) -> PathBuf {
+        self.root.clone()
+    }
+
     pub fn validate(&self, name: &str, version: &str) -> Result<()> {
         let package = self.load(name, version)?;
 

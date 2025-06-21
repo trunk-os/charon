@@ -4,6 +4,8 @@ use std::path::PathBuf;
 use tracing::info;
 use tracing_subscriber::FmtSubscriber;
 
+use crate::Registry;
+
 #[derive(Debug, Clone, Deserialize, Default)]
 pub enum LogLevel {
     #[serde(rename = "warn")]
@@ -48,6 +50,7 @@ pub struct Config {
     pub registry: PathBuf,
     pub socket: PathBuf,
     pub log_level: Option<LogLevel>,
+    pub debug: Option<bool>,
 }
 
 impl Config {
@@ -62,5 +65,13 @@ impl Config {
         tracing::subscriber::set_global_default(subscriber)?;
         info!("Configuration parsed successfully.");
         Ok(this)
+    }
+
+    pub fn registry(&self) -> Registry {
+        Registry::new(self.registry.clone())
+    }
+
+    pub fn debug(&self) -> bool {
+        self.debug.unwrap_or_default()
     }
 }
