@@ -3,8 +3,9 @@ use crate::{
     query_server::{Query, QueryServer},
     reload_systemd,
     status_server::{Status, StatusServer},
-    Config, InputType, ProtoPackageTitle, ProtoPackageTitleWithRoot, ProtoPrompt,
-    ProtoPromptResponses, ProtoPrompts, ProtoType, SystemdUnit,
+    Config, Input, InputType, PromptResponse, PromptResponses, ProtoPackageTitle,
+    ProtoPackageTitleWithRoot, ProtoPrompt, ProtoPromptResponses, ProtoPrompts, ProtoType,
+    SystemdUnit,
 };
 use std::os::unix::fs::PermissionsExt;
 use std::{fs::Permissions, io::Write};
@@ -141,9 +142,24 @@ impl Query for Server {
 
     async fn set_responses(
         &self,
-        _responses: tonic::Request<ProtoPromptResponses>,
+        responses: tonic::Request<ProtoPromptResponses>,
     ) -> Result<tonic::Response<()>> {
-        Ok(tonic::Response::new(Default::default()))
+        let r = self.config.registry();
+        let responses = responses.into_inner();
+
+        let mut pr = Vec::new();
+        for response in &responses.responses {
+            pr.push(PromptResponse {
+                template: response.template.clone(),
+                input: Input::String(response.response.clone()),
+            });
+        }
+
+        r.response_registry()
+            .set(&responses.name, &PromptResponses(pr))
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+
+        Ok(tonic::Response::new(()))
     }
 }
 

@@ -56,7 +56,7 @@ impl ResponseRegistry {
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
-pub struct PromptResponses(Vec<PromptResponse>);
+pub struct PromptResponses(pub Vec<PromptResponse>);
 
 impl From<Vec<PromptResponse>> for PromptResponses {
     fn from(value: Vec<PromptResponse>) -> Self {
