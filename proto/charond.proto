@@ -12,9 +12,8 @@ message ProtoPackageTitleWithRoot {
   string volume_root = 3;
 }
 
-service Operations {
-  rpc Launch(ProtoPackageTitleWithRoot) returns (google.protobuf.Empty);
-  rpc Stop(ProtoPackageTitleWithRoot)   returns (google.protobuf.Empty);
+service Control {
+  rpc WriteUnit(ProtoPackageTitleWithRoot) returns (google.protobuf.Empty);
 }
 
 message ProtoPackageTitle {

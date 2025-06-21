@@ -1,5 +1,8 @@
-use crate::status_server::{Status, StatusServer};
-use crate::Config;
+use crate::{
+    control_server::{Control, ControlServer},
+    status_server::{Status, StatusServer},
+};
+use crate::{Config, ProtoPackageTitleWithRoot};
 use std::fs::Permissions;
 use std::os::unix::fs::PermissionsExt;
 use tonic::{body::Body, transport::Server as TransportServer, Result};
@@ -38,6 +41,7 @@ impl Server {
         Ok(TransportServer::builder()
             .layer(MiddlewareLayer::new(LogMiddleware))
             .add_service(StatusServer::new(self.clone()))
+            .add_service(ControlServer::new(self.clone()))
             .serve_with_incoming(uds_stream))
     }
 }
@@ -45,6 +49,16 @@ impl Server {
 #[tonic::async_trait]
 impl Status for Server {
     async fn ping(&self, _: tonic::Request<()>) -> Result<tonic::Response<()>> {
+        Ok(tonic::Response::new(()))
+    }
+}
+
+#[tonic::async_trait]
+impl Control for Server {
+    async fn write_unit(
+        &self,
+        _: tonic::Request<ProtoPackageTitleWithRoot>,
+    ) -> Result<tonic::Response<()>> {
         Ok(tonic::Response::new(()))
     }
 }
