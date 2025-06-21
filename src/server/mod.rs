@@ -77,7 +77,9 @@ impl Control for Server {
             .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
 
         let unit = SystemdUnit::new(pkg);
-        if !self.config.debug() {
+        if self.config.debug() {
+            warn!("debug mode in effect; not writing unit file");
+        } else {
             let mut f = std::fs::OpenOptions::new()
                 .create(true)
                 .truncate(true)
@@ -96,8 +98,6 @@ impl Control for Server {
                 .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
 
             info!("Wrote unit to {}", unit.filename().display());
-        } else {
-            warn!("debug mode in effect; not writing unit file");
         }
 
         Ok(tonic::Response::new(()))
@@ -158,9 +158,14 @@ impl Query for Server {
             });
         }
 
-        r.response_registry()
-            .set(&responses.name, &PromptResponses(pr))
-            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+        if self.config.debug() {
+            warn!("Debug mode in effect; not writing responses");
+        } else {
+            r.response_registry()
+                .set(&responses.name, &PromptResponses(pr))
+                .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+            info!("Wrote responses for package {}", responses.name);
+        }
 
         Ok(tonic::Response::new(()))
     }
