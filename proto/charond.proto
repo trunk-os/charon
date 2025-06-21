@@ -43,16 +43,12 @@ message ProtoPromptResponse {
   string response = 2;
 }
 
-message ProtoName {
-  string name = 1;
-}
-
 message ProtoPromptResponses {
            string              name      = 1;
   repeated ProtoPromptResponse responses = 2;
 }
 
 service Query {
-  rpc GetPrompts(ProtoName)              returns (ProtoPrompts);
+  rpc GetPrompts(ProtoPackageTitle)      returns (ProtoPrompts);
   rpc SetResponses(ProtoPromptResponses) returns (google.protobuf.Empty);
 }

@@ -3,7 +3,8 @@ use crate::{
     query_server::{Query, QueryServer},
     reload_systemd,
     status_server::{Status, StatusServer},
-    Config, ProtoName, ProtoPackageTitleWithRoot, ProtoPromptResponses, ProtoPrompts, SystemdUnit,
+    Config, InputType, ProtoPackageTitle, ProtoPackageTitleWithRoot, ProtoPrompt,
+    ProtoPromptResponses, ProtoPrompts, ProtoType, SystemdUnit,
 };
 use std::os::unix::fs::PermissionsExt;
 use std::{fs::Permissions, io::Write};
@@ -103,9 +104,39 @@ impl Control for Server {
 impl Query for Server {
     async fn get_prompts(
         &self,
-        _name: tonic::Request<ProtoName>,
+        title: tonic::Request<ProtoPackageTitle>,
     ) -> Result<tonic::Response<ProtoPrompts>> {
-        Ok(tonic::Response::new(Default::default()))
+        let r = self.config.registry();
+        let title = title.into_inner();
+        let pkg = r
+            .load(&title.name, &title.version)
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+        let prompts = pkg.prompts.unwrap_or_default();
+
+        let mut out = ProtoPrompts::default();
+
+        for prompt in &prompts.to_vec() {
+            // FIXME: do a From trait
+            out.prompts.push(ProtoPrompt {
+                template: prompt.template.clone(),
+                question: prompt.question.clone(),
+                input_type: match prompt.input_type {
+                    InputType::Name | InputType::Path => ProtoType::String,
+                    InputType::Integer => ProtoType::Integer,
+                    InputType::SignedInteger => ProtoType::SignedInteger,
+                    InputType::Boolean => ProtoType::Boolean,
+                    _ => {
+                        return Err(tonic::Status::new(
+                            tonic::Code::Internal,
+                            "Unsupported input type in prompts".to_string(),
+                        ))
+                    }
+                }
+                .into(),
+            })
+        }
+
+        Ok(tonic::Response::new(out))
     }
 
     async fn set_responses(

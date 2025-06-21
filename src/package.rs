@@ -458,6 +458,10 @@ impl Registry {
         self.root.clone()
     }
 
+    pub fn response_registry(&self) -> ResponseRegistry {
+        ResponseRegistry::new(self.root.clone())
+    }
+
     pub fn validate(&self, name: &str, version: &str) -> Result<()> {
         let package = self.load(name, version)?;
 
