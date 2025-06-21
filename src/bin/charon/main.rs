@@ -1,11 +1,13 @@
 use anyhow::Result;
 use charon::{
-    generate_command, stop_package, Global, GlobalRegistry, PackageTitle, Registry, SourcePackage,
-    SystemdUnit,
+    generate_command, stop_package, Client, Global, GlobalRegistry, PackageTitle, Registry,
+    SourcePackage, SystemdUnit,
 };
 use clap::{Parser, Subcommand};
 use std::io::Write;
 use std::path::PathBuf;
+
+const DEFAULT_SOCKET_PATH: &str = "/tmp/charond.sock";
 
 #[derive(Parser, Debug, Clone)]
 #[command(version, about="CLI to the Charon Packaging System", long_about=None)]
@@ -23,6 +25,21 @@ enum Commands {
     Launch(LaunchArgs),
     Stop(StopArgs),
     CreateUnit(CreateUnitArgs),
+    Remote(RemoteArgs),
+}
+
+#[derive(Parser, Debug, Clone)]
+#[command(about="Remote Control charond through GRPC socket", long_about=None)]
+struct RemoteArgs {
+    #[arg(short = 's', long = "socket", help = "Path to control socket")]
+    socket: Option<PathBuf>,
+    #[command(subcommand)]
+    command: RemoteCommands,
+}
+
+#[derive(Subcommand, Debug, Clone)]
+enum RemoteCommands {
+    Ping,
 }
 
 #[derive(Parser, Debug, Clone)]
@@ -62,7 +79,8 @@ struct RemovePackageArgs {
     name: String,
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let args = MainArgs::parse();
     let cwd = std::env::current_dir()?;
     match args.command {
@@ -136,6 +154,16 @@ fn main() -> Result<()> {
                 "Wrote unit to '{}'. Please reload systemd to take effect.",
                 systemd.filename().display()
             );
+        }
+        Commands::Remote(r_args) => {
+            let socket = r_args.socket.unwrap_or_else(|| DEFAULT_SOCKET_PATH.into());
+
+            let client = Client::new(socket)?;
+            match r_args.command {
+                RemoteCommands::Ping => {
+                    client.status().await?.ping().await?;
+                }
+            }
         }
     }
 
