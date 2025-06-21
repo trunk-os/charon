@@ -13,6 +13,9 @@ use tonic::{body::Body, transport::Server as TransportServer, Result};
 use tonic_middleware::{Middleware, MiddlewareLayer, ServiceBound};
 use tracing::{error, info, warn};
 
+#[cfg(test)]
+mod tests;
+
 #[derive(Debug, Clone)]
 pub struct Server {
     config: Config,
