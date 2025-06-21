@@ -1,6 +1,7 @@
 use crate::CompiledPackage;
 use anyhow::{anyhow, Result};
 use std::path::PathBuf;
+use tracing::info;
 use zbus_systemd::{systemd1::ManagerProxy, zbus::Connection};
 
 const SYSTEMD_SERVICE_ROOT: &str = "/etc/systemd/system";
@@ -21,7 +22,10 @@ Alias=@PACKAGE_FILENAME@.service
 
 pub async fn reload_systemd() -> Result<()> {
     let mgr = ManagerProxy::new(&Connection::system().await?).await?;
-    Ok(mgr.reload().await?)
+    mgr.reload().await?;
+
+    info!("Reloaded systemd");
+    Ok(())
 }
 
 #[derive(Debug, Clone)]

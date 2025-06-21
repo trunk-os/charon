@@ -1,5 +1,6 @@
 use crate::{
     control_server::{Control, ControlServer},
+    reload_systemd,
     status_server::{Status, StatusServer},
     SystemdUnit,
 };
@@ -83,6 +84,11 @@ impl Control for Server {
                     .as_bytes(),
             )
             .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+
+            reload_systemd()
+                .await
+                .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+
             info!("Wrote unit to {}", unit.filename().display());
         } else {
             warn!("debug mode in effect; not writing unit file");
