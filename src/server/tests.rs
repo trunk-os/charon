@@ -1,10 +1,12 @@
+use std::path::PathBuf;
+
 use crate::{Client, Config, Server};
 use tempfile::NamedTempFile;
 
-#[tokio::test]
-async fn test_ping() {
+async fn start_server() -> PathBuf {
     let tf = NamedTempFile::new().unwrap();
-    let pb = tf.path().to_path_buf();
+    let (_, path) = tf.keep().unwrap();
+    let pb = path.to_path_buf();
     let pb2 = pb.clone();
     tokio::spawn(async move {
         Server::new(Config {
@@ -21,6 +23,11 @@ async fn test_ping() {
 
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-    let client = Client::new(pb).unwrap();
+    path
+}
+
+#[tokio::test]
+async fn test_ping() {
+    let client = Client::new(start_server().await.to_path_buf()).unwrap();
     client.status().await.unwrap().ping().await.unwrap();
 }
