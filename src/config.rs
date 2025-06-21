@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
-    pub repository: PathBuf,
+    pub registry: PathBuf,
     pub socket: PathBuf,
 }
 

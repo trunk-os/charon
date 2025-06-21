@@ -1,0 +1,2 @@
+registry: testdata/registry
+socket: /tmp/charond.sock
