@@ -1,4 +1,7 @@
-use crate::{Client, Config, InputType, Prompt, PromptCollection, Server};
+use crate::{
+    Client, Config, Input, InputType, Prompt, PromptCollection, PromptResponse, PromptResponses,
+    Server,
+};
 use std::path::PathBuf;
 use tempfile::NamedTempFile;
 
@@ -53,6 +56,7 @@ async fn test_get_prompts() {
         .get_prompts("podman-test", "0.0.2")
         .await
         .unwrap();
+
     assert!(prompts.0.is_empty());
 
     let prompts = client
@@ -84,4 +88,31 @@ async fn test_get_prompts() {
     ]);
 
     assert_eq!(prompts, equal);
+}
+
+#[tokio::test]
+async fn test_set_responses() {
+    let responses = PromptResponses(vec![
+        PromptResponse {
+            input: Input::String("/tmp/volroot".into()),
+            template: "private_path".into(),
+        },
+        PromptResponse {
+            input: Input::Integer(8675309),
+            template: "private_size".into(),
+        },
+        PromptResponse {
+            input: Input::Boolean(false),
+            template: "private_recreate".into(),
+        },
+    ]);
+
+    let client = Client::new(start_server().await.to_path_buf()).unwrap();
+    client
+        .query()
+        .await
+        .unwrap()
+        .set_responses("with-prompts", responses)
+        .await
+        .unwrap();
 }
