@@ -4,6 +4,7 @@ use charon::{
     SourcePackage, SystemdUnit,
 };
 use clap::{Parser, Subcommand};
+use fancy_duration::AsFancyDuration;
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -161,7 +162,12 @@ async fn main() -> Result<()> {
             let client = Client::new(socket)?;
             match r_args.command {
                 RemoteCommands::Ping => {
+                    let start = std::time::Instant::now();
                     client.status().await?.ping().await?;
+                    eprintln!(
+                        "Ping successful! Took {}",
+                        (std::time::Instant::now() - start).fancy_duration(),
+                    );
                 }
             }
         }

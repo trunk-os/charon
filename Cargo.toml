@@ -21,6 +21,7 @@ tracing-subscriber = "*"
 tokio-stream = "*"
 tonic-middleware = "*"
 http = "*"
+fancy-duration = "*"
 
 [dev-dependencies]
 tempfile = "*"
