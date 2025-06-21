@@ -122,7 +122,6 @@ impl QueryClient {
         }
 
         self.client.set_responses(Request::new(out)).await?;
-
         Ok(())
     }
 }
