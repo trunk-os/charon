@@ -1,2 +1,3 @@
 registry: testdata/registry
 socket: /tmp/charond.sock
+debug: true

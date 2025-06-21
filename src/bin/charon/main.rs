@@ -41,6 +41,7 @@ struct RemoteArgs {
 #[derive(Subcommand, Debug, Clone)]
 enum RemoteCommands {
     Ping,
+    WriteUnit(CreateUnitArgs),
 }
 
 #[derive(Parser, Debug, Clone)]
@@ -167,6 +168,21 @@ async fn main() -> Result<()> {
                     eprintln!(
                         "Ping successful! Took {}",
                         (std::time::Instant::now() - start).fancy_duration(),
+                    );
+                }
+                RemoteCommands::WriteUnit(wu_args) => {
+                    client
+                        .control()
+                        .await?
+                        .write_unit(
+                            &wu_args.package_name,
+                            &wu_args.package_version,
+                            wu_args.volume_root,
+                        )
+                        .await?;
+                    eprintln!(
+                        "Wrote unit for {}-{}",
+                        wu_args.package_name, wu_args.package_version,
                     );
                 }
             }
