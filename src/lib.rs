@@ -1,4 +1,5 @@
 mod cli;
+mod client;
 mod config;
 mod globals;
 mod grpc;
@@ -12,6 +13,7 @@ mod systemd;
 pub(crate) mod qmp;
 
 pub use cli::*;
+pub use client::*;
 pub use config::*;
 pub use globals::*;
 pub use grpc::*;
