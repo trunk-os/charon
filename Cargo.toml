@@ -15,7 +15,7 @@ url = "*"
 zbus_systemd = { version = "*", features = [ "systemd1" ] }
 tokio = { version = "*", features = [ "full" ] }
 tonic = "*"
-prost = "*"
+prost = "^0.13"
 tracing = { version = "*", features = [ "log" ] }
 tracing-subscriber = "*"
 tokio-stream = "*"
