@@ -1,5 +1,6 @@
 use crate::CompiledPackage;
 use anyhow::{anyhow, Result};
+use std::io::Write;
 use std::path::PathBuf;
 use tracing::info;
 use zbus_systemd::{systemd1::ManagerProxy, zbus::Connection};
@@ -72,6 +73,15 @@ impl SystemdUnit {
         }
 
         Ok(out)
+    }
+
+    pub fn create_unit(&self, registry_path: PathBuf, volume_root: PathBuf) -> Result<()> {
+        let mut f = std::fs::OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(self.filename())?;
+        Ok(f.write_all(self.unit(registry_path, volume_root)?.as_bytes())?)
     }
 }
 

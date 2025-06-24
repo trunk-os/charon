@@ -5,7 +5,6 @@ use charon::{
 };
 use clap::{Parser, Subcommand};
 use fancy_duration::AsFancyDuration;
-use std::io::Write;
 use std::path::PathBuf;
 
 const DEFAULT_SOCKET_PATH: &str = "/tmp/charond.sock";
@@ -138,18 +137,9 @@ async fn main() -> Result<()> {
                     .compile()?,
             );
 
-            let mut f = std::fs::OpenOptions::new()
-                .create(true)
-                .truncate(true)
-                .write(true)
-                .open(systemd.filename())?;
-            f.write_all(
-                systemd
-                    .unit(
-                        args.registry_path.unwrap_or(cwd.clone()),
-                        cu_args.volume_root,
-                    )?
-                    .as_bytes(),
+            systemd.create_unit(
+                args.registry_path.unwrap_or(cwd.clone()),
+                cu_args.volume_root,
             )?;
 
             println!(

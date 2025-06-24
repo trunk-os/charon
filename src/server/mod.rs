@@ -7,8 +7,7 @@ use crate::{
     ProtoPackageTitleWithRoot, ProtoPrompt, ProtoPromptResponses, ProtoPrompts, ProtoType,
     SystemdUnit,
 };
-use std::os::unix::fs::PermissionsExt;
-use std::{fs::Permissions, io::Write};
+use std::{fs::Permissions, os::unix::fs::PermissionsExt};
 use tonic::{body::Body, transport::Server as TransportServer, Result};
 use tonic_middleware::{Middleware, MiddlewareLayer, ServiceBound};
 use tracing::{error, info, warn};
@@ -80,18 +79,8 @@ impl Control for Server {
         if self.config.debug() {
             warn!("debug mode in effect; not writing unit file");
         } else {
-            let mut f = std::fs::OpenOptions::new()
-                .create(true)
-                .truncate(true)
-                .write(true)
-                .open(&unit.filename())
+            unit.create_unit(r.path(), title.volume_root.into())
                 .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
-            f.write_all(
-                unit.unit(r.path(), title.volume_root.into())
-                    .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?
-                    .as_bytes(),
-            )
-            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
 
             reload_systemd()
                 .await
