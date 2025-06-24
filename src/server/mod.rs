@@ -77,18 +77,53 @@ impl Control for Server {
 
         let unit = SystemdUnit::new(pkg, self.config.systemd_root.clone());
         if self.config.debug() {
-            warn!("debug mode in effect; not writing unit file");
+            warn!(
+                "debug mode in effect; not writing unit file to {}",
+                unit.filename().display()
+            );
         } else {
             unit.create_unit(r.path(), title.volume_root.into())
                 .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
 
+            info!("Wrote unit to {}", unit.filename().display());
+
             reload_systemd()
                 .await
                 .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
-
-            info!("Wrote unit to {}", unit.filename().display());
         }
 
+        Ok(tonic::Response::new(()))
+    }
+
+    async fn remove_unit(
+        &self,
+        title: tonic::Request<ProtoPackageTitle>,
+    ) -> Result<tonic::Response<()>> {
+        let r = self.config.registry();
+        let title = title.into_inner();
+
+        let pkg = r
+            .load(&title.name, &title.version)
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?
+            .compile()
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+
+        let unit = SystemdUnit::new(pkg, self.config.systemd_root.clone());
+        if self.config.debug() {
+            warn!(
+                "debug mode in effect; not removing unit file {}",
+                unit.filename().display()
+            );
+        } else {
+            unit.remove_unit()
+                .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+
+            info!("Removed unit {}", unit.filename().display());
+
+            reload_systemd()
+                .await
+                .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+        }
         Ok(tonic::Response::new(()))
     }
 }
