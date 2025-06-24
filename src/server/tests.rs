@@ -3,7 +3,7 @@ use crate::{
     Server,
 };
 use std::path::PathBuf;
-use tempfile::NamedTempFile;
+use tempfile::{tempdir, NamedTempFile};
 
 async fn start_server(debug: bool) -> (PathBuf, Option<PathBuf>) {
     let tf = NamedTempFile::new().unwrap();
@@ -14,10 +14,10 @@ async fn start_server(debug: bool) -> (PathBuf, Option<PathBuf>) {
     let systemd_root = if debug {
         None
     } else {
-        let tf = NamedTempFile::new().unwrap();
-        let (_, systemd_root) = tf.keep().unwrap();
-        Some(systemd_root)
+        let tf = tempdir().unwrap();
+        Some(tf.keep())
     };
+
     let inner = systemd_root.clone();
     tokio::spawn(async move {
         Server::new(Config {
@@ -44,8 +44,47 @@ async fn test_ping() {
     client.status().await.unwrap().ping().await.unwrap();
 }
 
+#[cfg(feature = "livetests")]
 #[tokio::test]
-async fn test_write_unit() {
+async fn test_write_unit_real() {
+    // real mode. validate written. this test also reloads systemd (which doesn't pick up anything
+    // new because of the temporary path to write to) so it needs to be run as root.
+    let (socket, systemd_path) = start_server(false).await;
+    let client = Client::new(socket).unwrap();
+    client
+        .control()
+        .await
+        .unwrap()
+        .write_unit("podman-test", "0.0.2", "/tmp/volroot".into())
+        .await
+        .unwrap();
+
+    let systemd_path = systemd_path.unwrap();
+
+    let content = std::fs::read_to_string(systemd_path.join("podman-test-0.0.2.service")).unwrap();
+    assert_eq!(
+        content,
+        format!(
+            r#"
+[Unit]
+Description=Charon launcher for podman-test, version 0.0.2
+After= # FIXME: this needs to follow the trunk microservices boot
+
+[Service]
+ExecStart=/usr/bin/charon -r testdata/registry launch podman-test 0.0.2 /tmp/volroot
+ExecStop=/usr/bin/charon -r testdata/registry stop podman-test 0.0.2 /tmp/volroot
+Restart=always
+
+[Install]
+Alias=podman-test-0.0.2.service
+"#
+        )
+    );
+}
+
+#[tokio::test]
+async fn test_write_unit_debug() {
+    // debug mode
     let client = Client::new(start_server(true).await.0.to_path_buf()).unwrap();
     client
         .control()
@@ -53,7 +92,7 @@ async fn test_write_unit() {
         .unwrap()
         .write_unit("podman-test", "0.0.2", "/tmp/volroot".into())
         .await
-        .unwrap()
+        .unwrap();
 }
 
 #[tokio::test]
