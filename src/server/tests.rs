@@ -51,6 +51,15 @@ async fn test_write_unit_real() {
     // new because of the temporary path to write to) so it needs to be run as root.
     let (socket, systemd_path) = start_server(false).await;
     let client = Client::new(socket).unwrap();
+
+    assert!(client
+        .control()
+        .await
+        .unwrap()
+        .remove_unit("podman-test", "0.0.2")
+        .await
+        .is_err());
+
     client
         .control()
         .await
@@ -81,6 +90,16 @@ Alias=podman-test-0.0.2.service
 "#
         )
     );
+
+    assert!(client
+        .control()
+        .await
+        .unwrap()
+        .remove_unit("podman-test", "0.0.2")
+        .await
+        .is_ok());
+
+    assert!(!std::fs::exists(systemd_path.join("podman-test-0.0.2.service")).unwrap())
 }
 
 #[tokio::test]

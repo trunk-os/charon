@@ -75,6 +75,19 @@ impl ControlClient {
             .await?
             .into_inner())
     }
+
+    pub async fn remove_unit(&mut self, name: &str, version: &str) -> Result<()> {
+        let out = ProtoPackageTitle {
+            name: name.into(),
+            version: version.into(),
+        };
+
+        Ok(self
+            .client
+            .remove_unit(Request::new(out))
+            .await?
+            .into_inner())
+    }
 }
 
 impl QueryClient {
