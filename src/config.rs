@@ -49,6 +49,7 @@ impl From<tracing::Level> for LogLevel {
 pub struct Config {
     pub registry: PathBuf,
     pub socket: PathBuf,
+    pub systemd_root: Option<PathBuf>,
     pub log_level: Option<LogLevel>,
     pub debug: Option<bool>,
 }

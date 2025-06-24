@@ -16,6 +16,7 @@ async fn start_server() -> PathBuf {
             log_level: None,
             debug: Some(true),
             registry: "testdata/registry".into(),
+            systemd_root: None,
         })
         .start()
         .unwrap()

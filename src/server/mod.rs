@@ -75,7 +75,7 @@ impl Control for Server {
             .compile()
             .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
 
-        let unit = SystemdUnit::new(pkg, None);
+        let unit = SystemdUnit::new(pkg, self.config.systemd_root.clone());
         if self.config.debug() {
             warn!("debug mode in effect; not writing unit file");
         } else {
