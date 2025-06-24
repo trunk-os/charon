@@ -5,7 +5,7 @@ use crate::{
 use std::path::PathBuf;
 use tempfile::NamedTempFile;
 
-async fn start_server(debug: bool) -> PathBuf {
+async fn start_server(debug: bool) -> (PathBuf, Option<PathBuf>) {
     let tf = NamedTempFile::new().unwrap();
     let (_, path) = tf.keep().unwrap();
     let pb = path.to_path_buf();
@@ -18,13 +18,14 @@ async fn start_server(debug: bool) -> PathBuf {
         let (_, systemd_root) = tf.keep().unwrap();
         Some(systemd_root)
     };
+    let inner = systemd_root.clone();
     tokio::spawn(async move {
         Server::new(Config {
             socket: pb2,
             log_level: None,
             debug: Some(debug),
             registry: "testdata/registry".into(),
-            systemd_root,
+            systemd_root: inner,
         })
         .start()
         .unwrap()
@@ -34,18 +35,18 @@ async fn start_server(debug: bool) -> PathBuf {
 
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-    path
+    (path, systemd_root)
 }
 
 #[tokio::test]
 async fn test_ping() {
-    let client = Client::new(start_server(true).await.to_path_buf()).unwrap();
+    let client = Client::new(start_server(true).await.0.to_path_buf()).unwrap();
     client.status().await.unwrap().ping().await.unwrap();
 }
 
 #[tokio::test]
 async fn test_write_unit() {
-    let client = Client::new(start_server(true).await.to_path_buf()).unwrap();
+    let client = Client::new(start_server(true).await.0.to_path_buf()).unwrap();
     client
         .control()
         .await
@@ -57,7 +58,7 @@ async fn test_write_unit() {
 
 #[tokio::test]
 async fn test_get_prompts() {
-    let client = Client::new(start_server(true).await.to_path_buf()).unwrap();
+    let client = Client::new(start_server(true).await.0.to_path_buf()).unwrap();
     let prompts = client
         .query()
         .await
@@ -116,7 +117,7 @@ async fn test_set_responses() {
         },
     ]);
 
-    let client = Client::new(start_server(true).await.to_path_buf()).unwrap();
+    let client = Client::new(start_server(true).await.0.to_path_buf()).unwrap();
     client
         .query()
         .await
