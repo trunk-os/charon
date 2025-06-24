@@ -32,15 +32,24 @@ pub async fn reload_systemd() -> Result<()> {
 #[derive(Debug, Clone)]
 pub struct SystemdUnit {
     package: CompiledPackage,
+    service_root: PathBuf,
 }
 
 impl SystemdUnit {
-    pub fn new(package: CompiledPackage) -> Self {
-        Self { package }
+    pub fn new(package: CompiledPackage, service_root: Option<PathBuf>) -> Self {
+        Self {
+            package,
+            service_root: service_root.unwrap_or_else(|| SYSTEMD_SERVICE_ROOT.into()),
+        }
     }
 
     pub fn filename(&self) -> PathBuf {
-        format!("{}/{}.service", SYSTEMD_SERVICE_ROOT, self.package.title).into()
+        format!(
+            "{}/{}.service",
+            self.service_root.display(),
+            self.package.title
+        )
+        .into()
     }
 
     pub fn unit(&self, registry_path: PathBuf, volume_root: PathBuf) -> Result<String> {
@@ -100,7 +109,7 @@ mod tests {
     #[test]
     fn unit_filename() {
         let registry = Registry::new("testdata/registry".into());
-        let unit = SystemdUnit::new(load(&registry, "podman-test", "0.0.2").unwrap());
+        let unit = SystemdUnit::new(load(&registry, "podman-test", "0.0.2").unwrap(), None);
         assert_eq!(
             unit.filename().as_os_str(),
             "/etc/systemd/system/podman-test-0.0.2.service"
@@ -113,7 +122,7 @@ mod tests {
         let td = TempDir::new().unwrap();
         let path = td.path();
         let pkg = load(&registry, "podman-test", "0.0.2").unwrap();
-        let unit = SystemdUnit::new(pkg);
+        let unit = SystemdUnit::new(pkg, None);
         let text = unit
             .unit("testdata/registry".into(), path.to_path_buf())
             .unwrap();

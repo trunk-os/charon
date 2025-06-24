@@ -135,6 +135,7 @@ async fn main() -> Result<()> {
             let systemd = SystemdUnit::new(
                 r.load(&cu_args.package_name, &cu_args.package_version)?
                     .compile()?,
+                None,
             );
 
             systemd.create_unit(
