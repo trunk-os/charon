@@ -10,6 +10,7 @@ const SYSTEMD_SERVICE_ROOT: &str = "/etc/systemd/system";
 const UNIT_TEMPLATE: &str = r#"
 [Unit]
 Description=Charon launcher for @PACKAGE_NAME@, version @PACKAGE_VERSION@
+After= # FIXME: add dependencies
 After= # FIXME: this needs to follow the trunk microservices boot
 
 [Service]
@@ -132,6 +133,7 @@ mod tests {
                 r#"
 [Unit]
 Description=Charon launcher for podman-test, version 0.0.2
+After= # FIXME: add dependencies
 After= # FIXME: this needs to follow the trunk microservices boot
 
 [Service]

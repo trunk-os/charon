@@ -68,6 +68,7 @@ async fn test_write_unit_real() {
             r#"
 [Unit]
 Description=Charon launcher for podman-test, version 0.0.2
+After= # FIXME: add dependencies
 After= # FIXME: this needs to follow the trunk microservices boot
 
 [Service]
