@@ -93,6 +93,10 @@ impl SystemdUnit {
             .open(self.filename())?;
         Ok(f.write_all(self.unit(registry_path, volume_root)?.as_bytes())?)
     }
+
+    pub fn remove_unit(&self) -> Result<()> {
+        Ok(std::fs::remove_file(self.filename())?)
+    }
 }
 
 #[cfg(test)]
