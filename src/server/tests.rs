@@ -5,18 +5,26 @@ use crate::{
 use std::path::PathBuf;
 use tempfile::NamedTempFile;
 
-async fn start_server() -> PathBuf {
+async fn start_server(debug: bool) -> PathBuf {
     let tf = NamedTempFile::new().unwrap();
     let (_, path) = tf.keep().unwrap();
     let pb = path.to_path_buf();
     let pb2 = pb.clone();
+
+    let systemd_root = if debug {
+        None
+    } else {
+        let tf = NamedTempFile::new().unwrap();
+        let (_, systemd_root) = tf.keep().unwrap();
+        Some(systemd_root)
+    };
     tokio::spawn(async move {
         Server::new(Config {
             socket: pb2,
             log_level: None,
-            debug: Some(true),
+            debug: Some(debug),
             registry: "testdata/registry".into(),
-            systemd_root: None,
+            systemd_root,
         })
         .start()
         .unwrap()
@@ -31,13 +39,13 @@ async fn start_server() -> PathBuf {
 
 #[tokio::test]
 async fn test_ping() {
-    let client = Client::new(start_server().await.to_path_buf()).unwrap();
+    let client = Client::new(start_server(true).await.to_path_buf()).unwrap();
     client.status().await.unwrap().ping().await.unwrap();
 }
 
 #[tokio::test]
 async fn test_write_unit() {
-    let client = Client::new(start_server().await.to_path_buf()).unwrap();
+    let client = Client::new(start_server(true).await.to_path_buf()).unwrap();
     client
         .control()
         .await
@@ -49,7 +57,7 @@ async fn test_write_unit() {
 
 #[tokio::test]
 async fn test_get_prompts() {
-    let client = Client::new(start_server().await.to_path_buf()).unwrap();
+    let client = Client::new(start_server(true).await.to_path_buf()).unwrap();
     let prompts = client
         .query()
         .await
@@ -108,7 +116,7 @@ async fn test_set_responses() {
         },
     ]);
 
-    let client = Client::new(start_server().await.to_path_buf()).unwrap();
+    let client = Client::new(start_server(true).await.to_path_buf()).unwrap();
     client
         .query()
         .await
