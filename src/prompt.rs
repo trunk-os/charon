@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::{Input, InputType};
+use crate::{Input, InputType, ProtoPromptResponse};
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
@@ -172,6 +172,24 @@ pub struct PromptResponse {
 impl std::fmt::Display for PromptResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.input.to_string())
+    }
+}
+
+impl From<PromptResponse> for ProtoPromptResponse {
+    fn from(value: PromptResponse) -> Self {
+        Self {
+            template: value.template.clone(),
+            response: value.input.to_string(),
+        }
+    }
+}
+
+impl From<ProtoPromptResponse> for PromptResponse {
+    fn from(value: ProtoPromptResponse) -> Self {
+        Self {
+            template: value.template.clone(),
+            input: Input::String(value.response),
+        }
     }
 }
 

@@ -91,6 +91,26 @@ impl ControlClient {
 }
 
 impl QueryClient {
+    pub async fn get_responses(&mut self, name: &str, version: &str) -> Result<PromptResponses> {
+        let title = ProtoPackageTitle {
+            name: name.into(),
+            version: version.into(),
+        };
+
+        let responses = self
+            .client
+            .get_responses(Request::new(title))
+            .await?
+            .into_inner();
+        let mut out = Vec::new();
+
+        for response in responses.responses {
+            out.push(response.into())
+        }
+
+        Ok(PromptResponses(out))
+    }
+
     pub async fn get_prompts(&mut self, name: &str, version: &str) -> Result<PromptCollection> {
         let title = ProtoPackageTitle {
             name: name.into(),

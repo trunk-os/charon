@@ -130,6 +130,32 @@ impl Control for Server {
 
 #[tonic::async_trait]
 impl Query for Server {
+    async fn get_responses(
+        &self,
+        title: tonic::Request<ProtoPackageTitle>,
+    ) -> Result<tonic::Response<ProtoPromptResponses>> {
+        let r = self.config.registry();
+        let title = title.into_inner();
+        let pkg = r
+            .load(&title.name, &title.version)
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+
+        let responses = pkg
+            .responses()
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+
+        let mut out = ProtoPromptResponses {
+            name: title.name,
+            responses: Vec::with_capacity(responses.0.len()),
+        };
+
+        for response in responses.0 {
+            out.responses.push(response.into());
+        }
+
+        Ok(tonic::Response::new(out))
+    }
+
     async fn get_prompts(
         &self,
         title: tonic::Request<ProtoPackageTitle>,
