@@ -160,7 +160,7 @@ async fn test_get_prompts() {
 }
 
 #[tokio::test]
-async fn test_set_responses() {
+async fn set_get_responses() {
     let responses = PromptResponses(vec![
         PromptResponse {
             input: Input::String("/tmp/volroot".into()),
@@ -181,7 +181,17 @@ async fn test_set_responses() {
         .query()
         .await
         .unwrap()
-        .set_responses("with-prompts", responses)
+        .set_responses("with-prompts", responses.clone())
         .await
         .unwrap();
+
+    let responses2 = client
+        .query()
+        .await
+        .unwrap()
+        .get_responses("with-prompts")
+        .await
+        .unwrap();
+
+    assert_eq!(responses, responses2);
 }

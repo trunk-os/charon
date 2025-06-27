@@ -5,7 +5,7 @@ use crate::{
     status_server::{Status, StatusServer},
     Config, Input, InputType, PromptResponse, PromptResponses, ProtoPackageTitle,
     ProtoPackageTitleWithRoot, ProtoPrompt, ProtoPromptResponses, ProtoPrompts, ProtoType,
-    SystemdUnit,
+    ResponseRegistry, SystemdUnit,
 };
 use std::{fs::Permissions, os::unix::fs::PermissionsExt};
 use tonic::{body::Body, transport::Server as TransportServer, Result};
@@ -134,14 +134,10 @@ impl Query for Server {
         &self,
         title: tonic::Request<ProtoPackageTitle>,
     ) -> Result<tonic::Response<ProtoPromptResponses>> {
-        let r = self.config.registry();
+        let r = ResponseRegistry::new(self.config.registry.clone());
         let title = title.into_inner();
-        let pkg = r
-            .load(&title.name, &title.version)
-            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
-
-        let responses = pkg
-            .responses()
+        let responses = r
+            .get(&title.name)
             .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
 
         let mut out = ProtoPromptResponses {
@@ -208,14 +204,10 @@ impl Query for Server {
             });
         }
 
-        if self.config.debug() {
-            warn!("Debug mode in effect; not writing responses");
-        } else {
-            r.response_registry()
-                .set(&responses.name, &PromptResponses(pr))
-                .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
-            info!("Wrote responses for package {}", responses.name);
-        }
+        r.response_registry()
+            .set(&responses.name, &PromptResponses(pr))
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+        info!("Wrote responses for package {}", responses.name);
 
         Ok(tonic::Response::new(()))
     }

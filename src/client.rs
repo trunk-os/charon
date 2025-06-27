@@ -91,10 +91,10 @@ impl ControlClient {
 }
 
 impl QueryClient {
-    pub async fn get_responses(&mut self, name: &str, version: &str) -> Result<PromptResponses> {
+    pub async fn get_responses(&mut self, name: &str) -> Result<PromptResponses> {
         let title = ProtoPackageTitle {
             name: name.into(),
-            version: version.into(),
+            version: String::new(),
         };
 
         let responses = self
