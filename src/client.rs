@@ -3,7 +3,7 @@ use crate::grpc::status_client::StatusClient as GRPCStatusClient;
 use crate::{grpc::control_client::ControlClient as GRPCControlClient, ProtoPackageTitle};
 use crate::{
     InputType, Prompt, PromptCollection, PromptResponses, ProtoPackageTitleWithRoot,
-    ProtoPromptResponse, ProtoPromptResponses, ProtoType,
+    ProtoPromptResponses, ProtoType,
 };
 use anyhow::Result;
 use std::path::PathBuf;
@@ -147,11 +147,8 @@ impl QueryClient {
             responses: Default::default(),
         };
 
-        for response in &responses.0 {
-            out.responses.push(ProtoPromptResponse {
-                template: response.template.clone(),
-                response: response.input.to_string(),
-            });
+        for response in responses.0 {
+            out.responses.push(response.into());
         }
 
         self.client.set_responses(Request::new(out)).await?;

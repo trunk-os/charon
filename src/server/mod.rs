@@ -3,9 +3,8 @@ use crate::{
     query_server::{Query, QueryServer},
     reload_systemd,
     status_server::{Status, StatusServer},
-    Config, Input, InputType, PromptResponse, PromptResponses, ProtoPackageTitle,
-    ProtoPackageTitleWithRoot, ProtoPrompt, ProtoPromptResponses, ProtoPrompts, ProtoType,
-    ResponseRegistry, SystemdUnit,
+    Config, InputType, PromptResponses, ProtoPackageTitle, ProtoPackageTitleWithRoot, ProtoPrompt,
+    ProtoPromptResponses, ProtoPrompts, ProtoType, ResponseRegistry, SystemdUnit,
 };
 use std::{fs::Permissions, os::unix::fs::PermissionsExt};
 use tonic::{body::Body, transport::Server as TransportServer, Result};
@@ -197,11 +196,8 @@ impl Query for Server {
         let responses = responses.into_inner();
 
         let mut pr = Vec::new();
-        for response in &responses.responses {
-            pr.push(PromptResponse {
-                template: response.template.clone(),
-                input: Input::String(response.response.clone()),
-            });
+        for response in responses.responses {
+            pr.push(response.into());
         }
 
         r.response_registry()

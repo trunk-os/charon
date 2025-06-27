@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::{Input, InputType, ProtoPromptResponse};
+use crate::{Input, InputType, ProtoPromptResponse, ProtoType};
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
@@ -180,6 +180,15 @@ impl From<PromptResponse> for ProtoPromptResponse {
         Self {
             template: value.template.clone(),
             response: value.input.to_string(),
+            // tag the type separate of the input, probably the only way this is going to work
+            input_type: match value.input {
+                Input::Integer(_) => ProtoType::Integer,
+                Input::SignedInteger(_) => ProtoType::SignedInteger,
+                Input::Boolean(_) => ProtoType::Boolean,
+                Input::String(_) => ProtoType::String,
+                _ => ProtoType::String,
+            }
+            .into(),
         }
     }
 }
@@ -188,7 +197,12 @@ impl From<ProtoPromptResponse> for PromptResponse {
     fn from(value: ProtoPromptResponse) -> Self {
         Self {
             template: value.template.clone(),
-            input: Input::String(value.response),
+            input: match value.input_type() {
+                ProtoType::Integer => Input::Integer(value.response.parse().unwrap()),
+                ProtoType::SignedInteger => Input::SignedInteger(value.response.parse().unwrap()),
+                ProtoType::Boolean => Input::Boolean(value.response.parse().unwrap()),
+                ProtoType::String => Input::String(value.response),
+            },
         }
     }
 }
