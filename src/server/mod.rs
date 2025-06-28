@@ -3,8 +3,9 @@ use crate::{
     query_server::{Query, QueryServer},
     reload_systemd,
     status_server::{Status, StatusServer},
-    Config, InputType, PromptResponses, ProtoPackageTitle, ProtoPackageTitleWithRoot, ProtoPrompt,
-    ProtoPromptResponses, ProtoPrompts, ProtoType, ResponseRegistry, SystemdUnit,
+    Config, InputType, PromptResponses, ProtoPackageInstalled, ProtoPackageTitle,
+    ProtoPackageTitleWithRoot, ProtoPrompt, ProtoPromptResponses, ProtoPrompts, ProtoType,
+    ResponseRegistry, SystemdUnit,
 };
 use std::{fs::Permissions, os::unix::fs::PermissionsExt};
 use tonic::{body::Body, transport::Server as TransportServer, Result};
@@ -61,6 +62,29 @@ impl Status for Server {
 
 #[tonic::async_trait]
 impl Control for Server {
+    async fn installed(
+        &self,
+        _title: tonic::Request<ProtoPackageTitle>,
+    ) -> Result<tonic::Response<ProtoPackageInstalled>> {
+        Ok(tonic::Response::new(ProtoPackageInstalled {
+            installed: false,
+        }))
+    }
+
+    async fn install(
+        &self,
+        _title: tonic::Request<ProtoPackageTitle>,
+    ) -> Result<tonic::Response<()>> {
+        Ok(tonic::Response::new(()))
+    }
+
+    async fn uninstall(
+        &self,
+        _title: tonic::Request<ProtoPackageTitle>,
+    ) -> Result<tonic::Response<()>> {
+        Ok(tonic::Response::new(()))
+    }
+
     async fn write_unit(
         &self,
         title: tonic::Request<ProtoPackageTitleWithRoot>,

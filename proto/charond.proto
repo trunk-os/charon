@@ -12,7 +12,14 @@ message ProtoPackageTitleWithRoot {
   string volume_root = 3;
 }
 
+message ProtoPackageInstalled {
+  bool installed = 1;
+}
+
 service Control {
+  rpc Install(ProtoPackageTitle)           returns (google.protobuf.Empty);
+  rpc Uninstall(ProtoPackageTitle)         returns (google.protobuf.Empty);
+  rpc Installed(ProtoPackageTitle)         returns (ProtoPackageInstalled);
   rpc WriteUnit(ProtoPackageTitleWithRoot) returns (google.protobuf.Empty);
   rpc RemoveUnit(ProtoPackageTitle)        returns (google.protobuf.Empty);
 }
