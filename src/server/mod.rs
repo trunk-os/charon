@@ -64,25 +64,58 @@ impl Status for Server {
 impl Control for Server {
     async fn installed(
         &self,
-        _title: tonic::Request<ProtoPackageTitle>,
+        title: tonic::Request<ProtoPackageTitle>,
     ) -> Result<tonic::Response<ProtoPackageInstalled>> {
+        let r = self.config.registry();
+        let title = title.into_inner();
+
+        let pkg = r
+            .load(&title.name, &title.version)
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?
+            .compile()
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+
         Ok(tonic::Response::new(ProtoPackageInstalled {
-            installed: false,
+            installed: pkg
+                .installed()
+                .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?,
         }))
     }
 
     async fn install(
         &self,
-        _title: tonic::Request<ProtoPackageTitle>,
+        title: tonic::Request<ProtoPackageTitle>,
     ) -> Result<tonic::Response<()>> {
-        Ok(tonic::Response::new(()))
+        let r = self.config.registry();
+        let title = title.into_inner();
+
+        let pkg = r
+            .load(&title.name, &title.version)
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?
+            .compile()
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+
+        Ok(tonic::Response::new(pkg.install().map_err(|e| {
+            tonic::Status::new(tonic::Code::Internal, e.to_string())
+        })?))
     }
 
     async fn uninstall(
         &self,
-        _title: tonic::Request<ProtoPackageTitle>,
+        title: tonic::Request<ProtoPackageTitle>,
     ) -> Result<tonic::Response<()>> {
-        Ok(tonic::Response::new(()))
+        let r = self.config.registry();
+        let title = title.into_inner();
+
+        let pkg = r
+            .load(&title.name, &title.version)
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?
+            .compile()
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+
+        Ok(tonic::Response::new(pkg.uninstall().map_err(|e| {
+            tonic::Status::new(tonic::Code::Internal, e.to_string())
+        })?))
     }
 
     async fn write_unit(
