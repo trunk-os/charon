@@ -44,6 +44,10 @@ impl SystemdUnit {
         }
     }
 
+    pub fn service_name(&self) -> String {
+        format!("{}.service", self.package.title).into()
+    }
+
     pub fn filename(&self) -> PathBuf {
         format!(
             "{}/{}.service",
@@ -112,13 +116,15 @@ mod tests {
     }
 
     #[test]
-    fn unit_filename() {
+    fn unit_names() {
         let registry = Registry::new("testdata/registry".into());
         let unit = SystemdUnit::new(load(&registry, "podman-test", "0.0.2").unwrap(), None);
         assert_eq!(
             unit.filename().as_os_str(),
             "/etc/systemd/system/podman-test-0.0.2.service"
         );
+
+        assert_eq!(unit.service_name(), "podman-test-0.0.2.service");
     }
 
     #[test]
