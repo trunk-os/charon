@@ -1,6 +1,6 @@
 use crate::{
-    Client, Config, Input, InputType, Prompt, PromptCollection, PromptResponse, PromptResponses,
-    Server,
+    Client, Config, Input, InputType, PackageTitle, Prompt, PromptCollection, PromptResponse,
+    PromptResponses, Server,
 };
 use std::path::PathBuf;
 use tempfile::{tempdir, NamedTempFile};
@@ -215,6 +215,20 @@ async fn installer() {
         .await
         .unwrap());
 
+    assert_eq!(
+        client
+            .query()
+            .await
+            .unwrap()
+            .list_installed()
+            .await
+            .unwrap(),
+        vec![PackageTitle {
+            name: "plex".into(),
+            version: "0.0.2".into()
+        }]
+    );
+
     client
         .control()
         .await
@@ -230,4 +244,15 @@ async fn installer() {
         .installed("plex", "0.0.2")
         .await
         .unwrap());
+
+    assert_eq!(
+        client
+            .query()
+            .await
+            .unwrap()
+            .list_installed()
+            .await
+            .unwrap(),
+        vec![]
+    );
 }
