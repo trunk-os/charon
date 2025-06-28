@@ -1,5 +1,6 @@
 use crate::{
-    Global, GlobalRegistry, PromptCollection, PromptResponses, ResponseRegistry, TemplatedInput,
+    Global, GlobalRegistry, PromptCollection, PromptResponses, ResponseRegistry, SystemdUnit,
+    TemplatedInput,
 };
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
@@ -129,6 +130,27 @@ impl SourcePackage {
                 .compile(&globals, &prompts, &responses)?,
         })
     }
+
+    pub fn dependencies(&self) -> Result<Vec<SourcePackage>> {
+        // FIXME: this check probably shouldn't exist
+        if self.root.is_none() {
+            return Err(anyhow!(
+                "source package does not contain registry information, cannot find dependencies"
+            ));
+        }
+
+        let mut v = Vec::new();
+
+        for item in self.dependencies.clone().unwrap_or_default() {
+            v.push(Self::from_file(
+                self.root.clone().unwrap().as_path(),
+                &item.name,
+                &item.version,
+            )?)
+        }
+
+        Ok(v)
+    }
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -141,6 +163,12 @@ pub struct CompiledPackage {
     pub storage: CompiledStorage,
     pub system: CompiledSystem,
     pub resources: CompiledResources,
+}
+
+impl CompiledPackage {
+    pub fn systemd_unit(&self, service_root: Option<PathBuf>) -> SystemdUnit {
+        SystemdUnit::new(self.clone(), service_root)
+    }
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -522,6 +550,16 @@ mod tests {
     use crate::{
         CompiledPackage, Global, GlobalRegistry, PackageTitle, Registry, SourcePackage, Variables,
     };
+
+    #[test]
+    fn dependencies() {
+        let registry = Registry::new("testdata/registry".into());
+        let pkg = registry.load("with-dependencies", "0.0.1").unwrap();
+        let plex = registry.load("plex", "0.0.2").unwrap();
+        let deps = pkg.dependencies().unwrap();
+
+        assert_eq!(deps, vec![plex]);
+    }
 
     #[test]
     fn validate() {
