@@ -14,6 +14,7 @@ use std::path::{Path, PathBuf};
 //
 
 const PACKAGE_SUBPATH: &str = "packages";
+const INSTALLED_SUBPATH: &str = "installed";
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct SourcePackage {
@@ -168,6 +169,18 @@ pub struct CompiledPackage {
 impl CompiledPackage {
     pub fn systemd_unit(&self, service_root: Option<PathBuf>) -> SystemdUnit {
         SystemdUnit::new(self.clone(), service_root)
+    }
+
+    pub fn install(&self) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn uninstall(&self) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn installed(&self) -> Result<bool> {
+        Ok(false)
     }
 }
 
