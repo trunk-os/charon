@@ -33,10 +33,10 @@ message ProtoPrompt {
 }
 
 enum ProtoType {
-    Integer       = 0;
-    SignedInteger = 1;
-    String        = 2;
-    Boolean       = 3;
+  Integer       = 0;
+  SignedInteger = 1;
+  String        = 2;
+  Boolean       = 3;
 }
 
 message ProtoPromptResponse {
