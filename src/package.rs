@@ -177,11 +177,12 @@ impl CompiledPackage {
     fn installed_path(&self) -> PathBuf {
         self.root
             .join(INSTALLED_SUBPATH)
-            .join(&self.title.to_string())
+            .join(&self.title.name)
+            .join(&self.title.version)
     }
 
     pub fn install(&self) -> Result<()> {
-        let pb = self.root.join(INSTALLED_SUBPATH);
+        let pb = self.root.join(INSTALLED_SUBPATH).join(&self.title.name);
         std::fs::create_dir_all(&pb)?;
 
         std::fs::OpenOptions::new()
@@ -515,6 +516,36 @@ impl Registry {
 
     pub fn path(&self) -> PathBuf {
         self.root.clone()
+    }
+
+    pub fn installed(&self) -> Result<Vec<PackageTitle>> {
+        let mut v = Vec::new();
+
+        let items = std::fs::read_dir(self.root.join(INSTALLED_SUBPATH))?;
+
+        for item in items {
+            let item = item?;
+            if item.metadata()?.is_dir() {
+                let path = item.path();
+                let name = path.file_name().unwrap().to_str().unwrap();
+                let inner = std::fs::read_dir(item.path())?;
+
+                for item in inner {
+                    let item = item?;
+                    if item.metadata()?.is_file() {
+                        let path = item.path();
+                        let version = path.file_name().unwrap().to_str().unwrap();
+
+                        v.push(PackageTitle {
+                            name: name.to_string(),
+                            version: version.to_string(),
+                        });
+                    }
+                }
+            }
+        }
+
+        Ok(v)
     }
 
     pub fn response_registry(&self) -> ResponseRegistry {

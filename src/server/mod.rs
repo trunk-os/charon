@@ -4,8 +4,8 @@ use crate::{
     reload_systemd,
     status_server::{Status, StatusServer},
     Config, InputType, PromptResponses, ProtoPackageInstalled, ProtoPackageTitle,
-    ProtoPackageTitleWithRoot, ProtoPrompt, ProtoPromptResponses, ProtoPrompts, ProtoType,
-    ResponseRegistry, SystemdUnit,
+    ProtoPackageTitleList, ProtoPackageTitleWithRoot, ProtoPrompt, ProtoPromptResponses,
+    ProtoPrompts, ProtoType, ResponseRegistry, SystemdUnit,
 };
 use std::{fs::Permissions, os::unix::fs::PermissionsExt};
 use tonic::{body::Body, transport::Server as TransportServer, Result};
@@ -186,6 +186,28 @@ impl Control for Server {
 
 #[tonic::async_trait]
 impl Query for Server {
+    async fn list_installed(
+        &self,
+        _empty: tonic::Request<()>,
+    ) -> Result<tonic::Response<ProtoPackageTitleList>> {
+        let r = self.config.registry();
+
+        let list = r
+            .installed()
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+
+        let mut v = Vec::new();
+
+        for item in list {
+            v.push(ProtoPackageTitle {
+                name: item.name,
+                version: item.version,
+            })
+        }
+
+        Ok(tonic::Response::new(ProtoPackageTitleList { list: v }))
+    }
+
     async fn get_responses(
         &self,
         title: tonic::Request<ProtoPackageTitle>,
