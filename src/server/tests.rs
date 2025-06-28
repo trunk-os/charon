@@ -195,3 +195,39 @@ async fn set_get_responses() {
 
     assert_eq!(responses, responses2);
 }
+
+#[tokio::test]
+async fn installer() {
+    let client = Client::new(start_server(true).await.0.to_path_buf()).unwrap();
+    client
+        .control()
+        .await
+        .unwrap()
+        .install("plex", "0.0.2")
+        .await
+        .unwrap();
+
+    assert!(client
+        .control()
+        .await
+        .unwrap()
+        .installed("plex", "0.0.2")
+        .await
+        .unwrap());
+
+    client
+        .control()
+        .await
+        .unwrap()
+        .uninstall("plex", "0.0.2")
+        .await
+        .unwrap();
+
+    assert!(!client
+        .control()
+        .await
+        .unwrap()
+        .installed("plex", "0.0.2")
+        .await
+        .unwrap());
+}

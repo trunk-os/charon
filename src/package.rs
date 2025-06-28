@@ -176,13 +176,12 @@ impl CompiledPackage {
 
     fn installed_path(&self) -> PathBuf {
         self.root
-            .join(PACKAGE_SUBPATH)
             .join(INSTALLED_SUBPATH)
             .join(&self.title.to_string())
     }
 
     pub fn install(&self) -> Result<()> {
-        let pb = self.root.join(PACKAGE_SUBPATH).join(INSTALLED_SUBPATH);
+        let pb = self.root.join(INSTALLED_SUBPATH);
         std::fs::create_dir_all(&pb)?;
 
         std::fs::OpenOptions::new()
