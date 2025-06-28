@@ -57,6 +57,41 @@ impl StatusClient {
 }
 
 impl ControlClient {
+    pub async fn install(&mut self, name: &str, version: &str) -> Result<()> {
+        Ok(self
+            .client
+            .install(Request::new(ProtoPackageTitle {
+                name: name.to_string(),
+                version: version.to_string(),
+            }))
+            .await?
+            .into_inner())
+    }
+
+    pub async fn uninstall(&mut self, name: &str, version: &str) -> Result<()> {
+        Ok(self
+            .client
+            .uninstall(Request::new(ProtoPackageTitle {
+                name: name.to_string(),
+                version: version.to_string(),
+            }))
+            .await?
+            .into_inner())
+    }
+
+    pub async fn installed(&mut self, name: &str, version: &str) -> Result<bool> {
+        let reply = self
+            .client
+            .installed(Request::new(ProtoPackageTitle {
+                name: name.to_string(),
+                version: version.to_string(),
+            }))
+            .await?
+            .into_inner();
+
+        Ok(reply.installed)
+    }
+
     pub async fn write_unit(
         &mut self,
         name: &str,
