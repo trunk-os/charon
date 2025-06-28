@@ -105,6 +105,7 @@ impl SourcePackage {
         let responses = self.responses().unwrap_or_default();
 
         Ok(CompiledPackage {
+            root: self.root.clone().unwrap_or_default(),
             title: self.title.clone(),
             description: self.description.clone(),
             dependencies: self.dependencies.clone().unwrap_or_default(),
@@ -164,6 +165,8 @@ pub struct CompiledPackage {
     pub storage: CompiledStorage,
     pub system: CompiledSystem,
     pub resources: CompiledResources,
+
+    root: PathBuf,
 }
 
 impl CompiledPackage {
@@ -171,16 +174,32 @@ impl CompiledPackage {
         SystemdUnit::new(self.clone(), service_root)
     }
 
+    fn installed_path(&self) -> PathBuf {
+        self.root
+            .join(PACKAGE_SUBPATH)
+            .join(INSTALLED_SUBPATH)
+            .join(&self.title.to_string())
+    }
+
     pub fn install(&self) -> Result<()> {
+        let pb = self.root.join(PACKAGE_SUBPATH).join(INSTALLED_SUBPATH);
+        std::fs::create_dir_all(&pb)?;
+
+        std::fs::OpenOptions::new()
+            .create_new(true)
+            .truncate(true)
+            .write(true)
+            .open(self.installed_path())?;
+
         Ok(())
     }
 
     pub fn uninstall(&self) -> Result<()> {
-        Ok(())
+        Ok(std::fs::remove_file(self.installed_path())?)
     }
 
     pub fn installed(&self) -> Result<bool> {
-        Ok(false)
+        Ok(std::fs::exists(self.installed_path())?)
     }
 }
 
@@ -705,6 +724,7 @@ mod tests {
         assert_eq!(
             out,
             CompiledPackage {
+                root: dir.path().to_path_buf(),
                 title: PackageTitle {
                     name: "plex".into(),
                     version: "1.2.3".into(),
