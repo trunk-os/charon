@@ -212,7 +212,7 @@ impl Query for Server {
         &self,
         title: tonic::Request<ProtoPackageTitle>,
     ) -> Result<tonic::Response<ProtoPromptResponses>> {
-        let r = ResponseRegistry::new(self.config.registry.clone());
+        let r = ResponseRegistry::new(self.config.registry.path.clone());
         let title = title.into_inner();
         let responses = r
             .get(&title.name)

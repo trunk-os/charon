@@ -1,6 +1,6 @@
 use crate::{
     Client, Config, Input, InputType, PackageTitle, Prompt, PromptCollection, PromptResponse,
-    PromptResponses, Server,
+    PromptResponses, RegistryConfig, Server,
 };
 use std::path::PathBuf;
 use tempfile::{tempdir, NamedTempFile};
@@ -24,7 +24,10 @@ async fn start_server(debug: bool) -> (PathBuf, Option<PathBuf>) {
             socket: pb2,
             log_level: None,
             debug: Some(debug),
-            registry: "testdata/registry".into(),
+            registry: RegistryConfig {
+                path: "testdata/registry".into(),
+                url: None,
+            },
             systemd_root: inner,
         })
         .start()
