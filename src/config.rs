@@ -117,8 +117,7 @@ impl Config {
     pub fn sync_registry(&self) -> Result<()> {
         if let Some(url) = &self.registry.url {
             // exists. here, we want to store any files we have laying around so the rebase doesn't
-            // fail.
-            // this is admittedly pretty dodgy but I don't have a better solution right now.
+            // fail. this is admittedly pretty dodgy but I don't have a better solution right now.
             if std::fs::exists(&self.registry.path)? {
                 run_command(vec![GIT_PATH.into(), "add".into(), ".".into()])?;
                 run_command(vec![GIT_PATH.into(), "stash".into()])?;
