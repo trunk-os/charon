@@ -102,6 +102,7 @@ impl Config {
             ))
             .finish();
         tracing::subscriber::set_global_default(subscriber)?;
+        this.sync_registry()?;
         info!("Configuration parsed successfully.");
         Ok(this)
     }
