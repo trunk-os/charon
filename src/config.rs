@@ -72,26 +72,6 @@ pub struct Config {
     pub debug: Option<bool>,
 }
 
-fn run_command(command: Vec<String>) -> Result<()> {
-    let mut iter = command.iter();
-    if let Some(cmd) = iter.nth(0) {
-        let status = std::process::Command::new(cmd)
-            .args(iter.collect::<Vec<&String>>())
-            .status()?;
-        if !status.success() {
-            return Err(anyhow!(
-                "command {:?} failed: exit status {}",
-                command.clone(),
-                status.code().unwrap_or(1)
-            ));
-        }
-    } else {
-        return Err(anyhow!("please specify a command"));
-    }
-
-    Ok(())
-}
-
 impl Config {
     pub fn from_file(filename: PathBuf) -> Result<Self> {
         let f = std::fs::OpenOptions::new().read(true).open(&filename)?;
@@ -120,20 +100,41 @@ impl Config {
             // exists. here, we want to store any files we have laying around so the rebase doesn't
             // fail. this is admittedly pretty dodgy but I don't have a better solution right now.
             if std::fs::exists(&self.registry.path)? {
-                run_command(vec![GIT_PATH.into(), "add".into(), ".".into()])?;
-                run_command(vec![GIT_PATH.into(), "stash".into()])?;
-                run_command(vec![GIT_PATH.into(), "pull".into(), "--rebase".into()])?;
-                run_command(vec![GIT_PATH.into(), "stash".into(), "apply".into()])?;
+                self.run_command(vec![GIT_PATH.into(), "add".into(), ".".into()])?;
+                self.run_command(vec![GIT_PATH.into(), "stash".into()])?;
+                self.run_command(vec![GIT_PATH.into(), "pull".into(), "--rebase".into()])?;
+                self.run_command(vec![GIT_PATH.into(), "stash".into(), "apply".into()])?;
             } else {
                 std::fs::create_dir_all(&self.registry.path)?;
                 // first time, clone it
-                run_command(vec![
+                self.run_command(vec![
                     GIT_PATH.into(),
                     "clone".into(),
                     url.clone(),
                     self.registry.path.to_string_lossy().to_string(),
                 ])?;
             }
+        }
+
+        Ok(())
+    }
+
+    fn run_command(&self, command: Vec<String>) -> Result<()> {
+        let mut iter = command.iter();
+        if let Some(cmd) = iter.nth(0) {
+            let status = std::process::Command::new(cmd)
+                .args(iter.collect::<Vec<&String>>())
+                .current_dir(&self.registry.path)
+                .status()?;
+            if !status.success() {
+                return Err(anyhow!(
+                    "command {:?} failed: exit status {}",
+                    command.clone(),
+                    status.code().unwrap_or(1)
+                ));
+            }
+        } else {
+            return Err(anyhow!("please specify a command"));
         }
 
         Ok(())
