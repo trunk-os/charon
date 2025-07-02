@@ -103,7 +103,8 @@ impl Config {
                 self.run_command(vec![GIT_PATH.into(), "add".into(), ".".into()])?;
                 self.run_command(vec![GIT_PATH.into(), "stash".into()])?;
                 self.run_command(vec![GIT_PATH.into(), "pull".into(), "--rebase".into()])?;
-                self.run_command(vec![GIT_PATH.into(), "stash".into(), "apply".into()])?;
+                // FIXME this sucks
+                let _ = self.run_command(vec![GIT_PATH.into(), "stash".into(), "apply".into()]);
             } else {
                 std::fs::create_dir_all(&self.registry.path)?;
                 // first time, clone it
