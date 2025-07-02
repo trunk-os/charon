@@ -2,8 +2,8 @@ use crate::grpc::query_client::QueryClient as GRPCQueryClient;
 use crate::grpc::status_client::StatusClient as GRPCStatusClient;
 use crate::{grpc::control_client::ControlClient as GRPCControlClient, ProtoPackageTitle};
 use crate::{
-    InputType, PackageTitle, Prompt, PromptCollection, PromptResponses, ProtoPackageTitleWithRoot,
-    ProtoPromptResponses, ProtoType,
+    InputType, InstallStatus, PackageTitle, Prompt, PromptCollection, PromptResponses,
+    ProtoPackageTitleWithRoot, ProtoPromptResponses, ProtoType,
 };
 use anyhow::Result;
 use std::path::PathBuf;
@@ -79,7 +79,7 @@ impl ControlClient {
             .into_inner())
     }
 
-    pub async fn installed(&mut self, name: &str, version: &str) -> Result<bool> {
+    pub async fn installed(&mut self, name: &str, version: &str) -> Result<Option<InstallStatus>> {
         let reply = self
             .client
             .installed(Request::new(ProtoPackageTitle {
@@ -89,7 +89,7 @@ impl ControlClient {
             .await?
             .into_inner();
 
-        Ok(reply.installed)
+        Ok(reply.proto_install_state.map(|x| x.into()))
     }
 
     pub async fn write_unit(

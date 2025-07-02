@@ -1,8 +1,10 @@
 use crate::{
-    Global, GlobalRegistry, PromptCollection, PromptResponses, ResponseRegistry, SystemdUnit,
-    TemplatedInput,
+    proto_package_installed::ProtoInstallState, Global, GlobalRegistry, PromptCollection,
+    PromptResponses, ProtoLastRunState, ProtoRuntimeState, ProtoStatus, ResponseRegistry,
+    SystemdUnit, TemplatedInput,
 };
 use anyhow::{anyhow, Result};
+use buckle::systemd::{LastRunState, RuntimeState};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -169,6 +171,69 @@ pub struct CompiledPackage {
     root: PathBuf,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub enum InstallStatus {
+    Installed(buckle::systemd::Status),
+    NotInstalled,
+}
+
+impl From<InstallStatus> for ProtoInstallState {
+    fn from(value: InstallStatus) -> Self {
+        match &value {
+            InstallStatus::Installed(status) => Self::Installed(ProtoStatus {
+                runtime_state: match status.runtime_state {
+                    RuntimeState::Started => ProtoRuntimeState::Started,
+                    RuntimeState::Stopped => ProtoRuntimeState::Stopped,
+                    RuntimeState::Reloaded => ProtoRuntimeState::Reloaded,
+                    RuntimeState::Restarted => ProtoRuntimeState::Restarted,
+                }
+                .into(),
+                last_run_state: match status.last_run_state {
+                    LastRunState::Dead => ProtoLastRunState::Dead,
+                    LastRunState::Failed => ProtoLastRunState::Failed,
+                    LastRunState::Exited => ProtoLastRunState::Exited,
+                    LastRunState::Active => ProtoLastRunState::Active,
+                    LastRunState::Mounted => ProtoLastRunState::Mounted,
+                    LastRunState::Running => ProtoLastRunState::Running,
+                    LastRunState::Plugged => ProtoLastRunState::Plugged,
+                    LastRunState::Waiting => ProtoLastRunState::Waiting,
+                    LastRunState::Listening => ProtoLastRunState::Listening,
+                }
+                .into(),
+            }),
+            InstallStatus::NotInstalled => Self::NotInstalled(()),
+        }
+    }
+}
+
+impl From<ProtoInstallState> for InstallStatus {
+    fn from(value: ProtoInstallState) -> Self {
+        match &value {
+            ProtoInstallState::Installed(status) => Self::Installed(buckle::systemd::Status {
+                runtime_state: match status.runtime_state() {
+                    ProtoRuntimeState::Started => RuntimeState::Started,
+                    ProtoRuntimeState::Stopped => RuntimeState::Stopped,
+                    ProtoRuntimeState::Reloaded => RuntimeState::Reloaded,
+                    ProtoRuntimeState::Restarted => RuntimeState::Restarted,
+                },
+                last_run_state: match status.last_run_state() {
+                    ProtoLastRunState::Dead => LastRunState::Dead,
+                    ProtoLastRunState::Failed => LastRunState::Failed,
+                    ProtoLastRunState::Exited => LastRunState::Exited,
+                    ProtoLastRunState::Active => LastRunState::Active,
+                    ProtoLastRunState::Mounted => LastRunState::Mounted,
+                    ProtoLastRunState::Running => LastRunState::Running,
+                    ProtoLastRunState::Plugged => LastRunState::Plugged,
+                    ProtoLastRunState::Waiting => LastRunState::Waiting,
+                    ProtoLastRunState::Listening => LastRunState::Listening,
+                }
+                .into(),
+            }),
+            ProtoInstallState::NotInstalled(_) => Self::NotInstalled,
+        }
+    }
+}
+
 impl CompiledPackage {
     pub fn systemd_unit(&self, service_root: Option<PathBuf>) -> SystemdUnit {
         SystemdUnit::new(self.clone(), service_root)
@@ -198,8 +263,12 @@ impl CompiledPackage {
         Ok(std::fs::remove_file(self.installed_path())?)
     }
 
-    pub fn installed(&self) -> Result<bool> {
-        Ok(std::fs::exists(self.installed_path())?)
+    pub fn installed(&self) -> Result<InstallStatus> {
+        if std::fs::exists(self.installed_path())? {
+            Ok(InstallStatus::Installed(buckle::systemd::Status::default()))
+        } else {
+            Ok(InstallStatus::NotInstalled)
+        }
     }
 }
 

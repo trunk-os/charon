@@ -12,10 +12,6 @@ message ProtoPackageTitleWithRoot {
   string volume_root = 3;
 }
 
-message ProtoPackageInstalled {
-  bool installed = 1;
-}
-
 service Control {
   rpc Install(ProtoPackageTitle)           returns (google.protobuf.Empty);
   rpc Uninstall(ProtoPackageTitle)         returns (google.protobuf.Empty);
@@ -59,6 +55,37 @@ message ProtoPromptResponses {
 
 message ProtoPackageTitleList {
   repeated ProtoPackageTitle list = 1;
+}
+
+enum ProtoRuntimeState {
+  Restarted = 0;
+  Started   = 1;
+  Stopped   = 2;
+  Reloaded  = 3;
+}
+
+enum ProtoLastRunState {
+  Listening = 0;
+  Dead      = 1;
+  Exited    = 2;
+  Active    = 3;
+  Mounted   = 4;
+  Running   = 5;
+  Plugged   = 6;
+  Waiting   = 7;
+  Failed    = 8;
+}
+
+message ProtoStatus {
+  ProtoRuntimeState runtime_state  = 1;
+  ProtoLastRunState last_run_state = 2;
+}
+
+message ProtoPackageInstalled {
+  oneof proto_install_state {
+    ProtoStatus           installed     = 1;
+    google.protobuf.Empty not_installed = 2;
+  }
 }
 
 service Query {

@@ -76,9 +76,11 @@ impl Control for Server {
             .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
 
         Ok(tonic::Response::new(ProtoPackageInstalled {
-            installed: pkg
-                .installed()
-                .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?,
+            proto_install_state: Some(
+                pkg.installed()
+                    .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?
+                    .into(),
+            ),
         }))
     }
 
