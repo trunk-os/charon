@@ -76,7 +76,7 @@ fn run_command(command: Vec<String>) -> Result<()> {
     let mut iter = command.iter();
     if let Some(cmd) = iter.nth(0) {
         let status = std::process::Command::new(cmd)
-            .args(iter.skip(1).collect::<Vec<&String>>())
+            .args(iter.collect::<Vec<&String>>())
             .status()?;
         if !status.success() {
             return Err(anyhow!(
