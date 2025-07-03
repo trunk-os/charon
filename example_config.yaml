@@ -1,5 +1,8 @@
 # path to registry tree
-registry: testdata/registry
+registry:
+  path: testdata/registry
+  # URL to a remote repository to pull for new informatino, or null to ignore this behavior.
+  url: null
 # path to charond socket
 socket: /tmp/charond.sock
 # optional: do not perform write operations or other dangerous things, just log them
