@@ -270,7 +270,6 @@ impl CompiledPackage {
         client
             .load_unit(format!("{}.service", self.title.to_string()))
             .await?;
-        eprintln!("here");
         Ok(())
     }
 
@@ -282,11 +281,9 @@ impl CompiledPackage {
     pub async fn installed(&self) -> Result<InstallStatus> {
         if std::fs::exists(self.installed_path())? {
             let client = buckle::systemd::Systemd::new_system().await?;
-            eprintln!("here");
             let path = client
                 .get_unit(format!("{}.service", self.title.to_string()))
                 .await?;
-            eprintln!("here");
             let status = client.status(path).await?;
             Ok(InstallStatus::Installed(status))
         } else {
