@@ -57,6 +57,12 @@ message ProtoPackageTitleList {
   repeated ProtoPackageTitle list = 1;
 }
 
+enum ProtoLoadState {
+  Loaded   = 0;
+  Unloaded = 1;
+  Inactive = 2;
+}
+
 enum ProtoRuntimeState {
   Restarted = 0;
   Started   = 1;
@@ -79,6 +85,7 @@ enum ProtoLastRunState {
 message ProtoStatus {
   ProtoRuntimeState runtime_state  = 1;
   ProtoLastRunState last_run_state = 2;
+  ProtoLoadState    load_state     = 3;
 }
 
 message ProtoPackageInstalled {

@@ -1,10 +1,10 @@
 use crate::{
     proto_package_installed::ProtoInstallState, Global, GlobalRegistry, PromptCollection,
-    PromptResponses, ProtoLastRunState, ProtoRuntimeState, ProtoStatus, ResponseRegistry,
-    SystemdUnit, TemplatedInput,
+    PromptResponses, ProtoLastRunState, ProtoLoadState, ProtoRuntimeState, ProtoStatus,
+    ResponseRegistry, SystemdUnit, TemplatedInput,
 };
 use anyhow::{anyhow, Result};
-use buckle::systemd::{LastRunState, RuntimeState, Status};
+use buckle::systemd::{LastRunState, LoadState, RuntimeState};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -181,6 +181,12 @@ impl From<InstallStatus> for ProtoInstallState {
     fn from(value: InstallStatus) -> Self {
         match &value {
             InstallStatus::Installed(status) => Self::Installed(ProtoStatus {
+                load_state: match status.load_state {
+                    LoadState::Loaded => ProtoLoadState::Loaded,
+                    LoadState::Unloaded => ProtoLoadState::Unloaded,
+                    LoadState::Inactive => ProtoLoadState::Inactive,
+                }
+                .into(),
                 runtime_state: match status.runtime_state {
                     RuntimeState::Started => ProtoRuntimeState::Started,
                     RuntimeState::Stopped => ProtoRuntimeState::Stopped,
@@ -210,6 +216,11 @@ impl From<ProtoInstallState> for InstallStatus {
     fn from(value: ProtoInstallState) -> Self {
         match &value {
             ProtoInstallState::Installed(status) => Self::Installed(buckle::systemd::Status {
+                load_state: match status.load_state() {
+                    ProtoLoadState::Loaded => LoadState::Loaded,
+                    ProtoLoadState::Unloaded => LoadState::Unloaded,
+                    ProtoLoadState::Inactive => LoadState::Inactive,
+                },
                 runtime_state: match status.runtime_state() {
                     ProtoRuntimeState::Started => RuntimeState::Started,
                     ProtoRuntimeState::Stopped => RuntimeState::Stopped,
@@ -255,6 +266,11 @@ impl CompiledPackage {
             .truncate(true)
             .write(true)
             .open(self.installed_path())?;
+        let client = buckle::systemd::Systemd::new_system().await?;
+        client
+            .load_unit(format!("{}.service", self.title.to_string()))
+            .await?;
+        eprintln!("here");
         Ok(())
     }
 
@@ -265,7 +281,14 @@ impl CompiledPackage {
 
     pub async fn installed(&self) -> Result<InstallStatus> {
         if std::fs::exists(self.installed_path())? {
-            Ok(InstallStatus::Installed(Status::default()))
+            let client = buckle::systemd::Systemd::new_system().await?;
+            eprintln!("here");
+            let path = client
+                .get_unit(format!("{}.service", self.title.to_string()))
+                .await?;
+            eprintln!("here");
+            let status = client.status(path).await?;
+            Ok(InstallStatus::Installed(status))
         } else {
             Ok(InstallStatus::NotInstalled)
         }
