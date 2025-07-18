@@ -1,6 +1,6 @@
 use crate::{
-    Client, Config, Input, InputType, InstallStatus, PackageTitle, Prompt, PromptCollection,
-    PromptResponse, PromptResponses, RegistryConfig, Server,
+    Client, Config, Input, InputType, Prompt, PromptCollection, PromptResponse, PromptResponses,
+    RegistryConfig, Server,
 };
 use std::path::PathBuf;
 use tempfile::{tempdir, NamedTempFile};
@@ -80,8 +80,6 @@ async fn test_write_unit_real() {
             r#"
 [Unit]
 Description=Charon launcher for podman-test, version 0.0.2
-After= # FIXME: add dependencies
-After= # FIXME: this needs to follow the trunk microservices boot
 
 [Service]
 ExecStart=/usr/bin/charon -r testdata/registry launch podman-test 0.0.2 /tmp/volroot
@@ -106,7 +104,8 @@ Alias=podman-test-0.0.2.service
 }
 
 #[tokio::test]
-async fn test_write_unit_debug() {
+#[cfg(feature = "livetests")]
+async fn test_write_unit() {
     // debug mode
     let client = Client::new(start_server(true).await.0.to_path_buf()).unwrap();
     client
@@ -200,7 +199,10 @@ async fn set_get_responses() {
 }
 
 #[tokio::test]
+#[cfg(feature = "livetests")]
 async fn installer() {
+    use crate::{InstallStatus, PackageTitle};
+
     let client = Client::new(start_server(true).await.0.to_path_buf()).unwrap();
     client
         .control()
@@ -209,6 +211,8 @@ async fn installer() {
         .install("plex", "0.0.2")
         .await
         .unwrap();
+
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
     assert!(matches!(
         client

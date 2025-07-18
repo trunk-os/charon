@@ -138,10 +138,12 @@ async fn main() -> Result<()> {
                 None,
             );
 
-            systemd.create_unit(
-                args.registry_path.unwrap_or(cwd.clone()),
-                cu_args.volume_root,
-            )?;
+            systemd
+                .create_unit(
+                    args.registry_path.unwrap_or(cwd.clone()),
+                    cu_args.volume_root,
+                )
+                .await?;
 
             println!(
                 "Wrote unit to '{}'. Please reload systemd to take effect.",

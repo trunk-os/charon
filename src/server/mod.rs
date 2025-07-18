@@ -1,7 +1,6 @@
 use crate::{
     control_server::{Control, ControlServer},
     query_server::{Query, QueryServer},
-    reload_systemd,
     status_server::{Status, StatusServer},
     Config, InputType, PromptResponses, ProtoPackageInstalled, ProtoPackageTitle,
     ProtoPackageTitleList, ProtoPackageTitleWithRoot, ProtoPrompt, ProtoPromptResponses,
@@ -10,7 +9,7 @@ use crate::{
 use std::{fs::Permissions, os::unix::fs::PermissionsExt};
 use tonic::{body::Body, transport::Server as TransportServer, Result};
 use tonic_middleware::{Middleware, MiddlewareLayer, ServiceBound};
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 #[cfg(test)]
 mod tests;
@@ -78,6 +77,7 @@ impl Control for Server {
         Ok(tonic::Response::new(ProtoPackageInstalled {
             proto_install_state: Some(
                 pkg.installed()
+                    .await
                     .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?
                     .into(),
             ),
@@ -97,9 +97,19 @@ impl Control for Server {
             .compile()
             .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
 
-        Ok(tonic::Response::new(pkg.install().map_err(|e| {
-            tonic::Status::new(tonic::Code::Internal, e.to_string())
-        })?))
+        pkg.install()
+            .await
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+
+        Ok(tonic::Response::new(
+            self.write_unit(tonic::Request::new(ProtoPackageTitleWithRoot {
+                name: title.name,
+                version: title.version,
+                volume_root: "/tmp/volroot".into(),
+            }))
+            .await?
+            .into_inner(),
+        ))
     }
 
     async fn uninstall(
@@ -115,9 +125,15 @@ impl Control for Server {
             .compile()
             .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
 
-        Ok(tonic::Response::new(pkg.uninstall().map_err(|e| {
-            tonic::Status::new(tonic::Code::Internal, e.to_string())
-        })?))
+        pkg.uninstall()
+            .await
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+
+        Ok(tonic::Response::new(
+            self.remove_unit(tonic::Request::new(title))
+                .await?
+                .into_inner(),
+        ))
     }
 
     async fn write_unit(
@@ -134,21 +150,11 @@ impl Control for Server {
             .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
 
         let unit = SystemdUnit::new(pkg, self.config.systemd_root.clone());
-        if self.config.debug() {
-            warn!(
-                "debug mode in effect; not writing unit file to {}",
-                unit.filename().display()
-            );
-        } else {
-            unit.create_unit(r.path(), title.volume_root.into())
-                .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+        unit.create_unit(r.path(), title.volume_root.into())
+            .await
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
 
-            info!("Wrote unit to {}", unit.filename().display());
-
-            reload_systemd()
-                .await
-                .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
-        }
+        info!("Wrote unit to {}", unit.filename().display());
 
         Ok(tonic::Response::new(()))
     }
@@ -167,21 +173,12 @@ impl Control for Server {
             .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
 
         let unit = SystemdUnit::new(pkg, self.config.systemd_root.clone());
-        if self.config.debug() {
-            warn!(
-                "debug mode in effect; not removing unit file {}",
-                unit.filename().display()
-            );
-        } else {
-            unit.remove_unit()
-                .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+        unit.remove_unit()
+            .await
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
 
-            info!("Removed unit {}", unit.filename().display());
+        info!("Removed unit {}", unit.filename().display());
 
-            reload_systemd()
-                .await
-                .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
-        }
         Ok(tonic::Response::new(()))
     }
 }

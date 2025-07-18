@@ -4,7 +4,7 @@ use crate::{
     SystemdUnit, TemplatedInput,
 };
 use anyhow::{anyhow, Result};
-use buckle::systemd::{LastRunState, RuntimeState};
+use buckle::systemd::{LastRunState, RuntimeState, Status};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -246,7 +246,7 @@ impl CompiledPackage {
             .join(&self.title.version)
     }
 
-    pub fn install(&self) -> Result<()> {
+    pub async fn install(&self) -> Result<()> {
         let pb = self.root.join(INSTALLED_SUBPATH).join(&self.title.name);
         std::fs::create_dir_all(&pb)?;
 
@@ -255,17 +255,17 @@ impl CompiledPackage {
             .truncate(true)
             .write(true)
             .open(self.installed_path())?;
-
         Ok(())
     }
 
-    pub fn uninstall(&self) -> Result<()> {
-        Ok(std::fs::remove_file(self.installed_path())?)
+    pub async fn uninstall(&self) -> Result<()> {
+        std::fs::remove_file(self.installed_path())?;
+        Ok(())
     }
 
-    pub fn installed(&self) -> Result<InstallStatus> {
+    pub async fn installed(&self) -> Result<InstallStatus> {
         if std::fs::exists(self.installed_path())? {
-            Ok(InstallStatus::Installed(buckle::systemd::Status::default()))
+            Ok(InstallStatus::Installed(Status::default()))
         } else {
             Ok(InstallStatus::NotInstalled)
         }

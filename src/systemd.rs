@@ -2,16 +2,12 @@ use crate::CompiledPackage;
 use anyhow::{anyhow, Result};
 use std::io::Write;
 use std::path::PathBuf;
-use tracing::info;
-use zbus_systemd::{systemd1::ManagerProxy, zbus::Connection};
 
 const SYSTEMD_SERVICE_ROOT: &str = "/etc/systemd/system";
 
 const UNIT_TEMPLATE: &str = r#"
 [Unit]
 Description=Charon launcher for @PACKAGE_NAME@, version @PACKAGE_VERSION@
-After= # FIXME: add dependencies
-After= # FIXME: this needs to follow the trunk microservices boot
 
 [Service]
 ExecStart=/usr/bin/charon -r @REGISTRY_PATH@ launch @PACKAGE_NAME@ @PACKAGE_VERSION@ @VOLUME_ROOT@
@@ -21,14 +17,6 @@ Restart=always
 [Install]
 Alias=@PACKAGE_FILENAME@.service
 "#;
-
-pub async fn reload_systemd() -> Result<()> {
-    let mgr = ManagerProxy::new(&Connection::system().await?).await?;
-    mgr.reload().await?;
-
-    info!("Reloaded systemd");
-    Ok(())
-}
 
 #[derive(Debug, Clone)]
 pub struct SystemdUnit {
@@ -89,27 +77,36 @@ impl SystemdUnit {
         Ok(out)
     }
 
-    pub fn create_unit(&self, registry_path: PathBuf, volume_root: PathBuf) -> Result<()> {
+    pub async fn create_unit(&self, registry_path: PathBuf, volume_root: PathBuf) -> Result<()> {
         let mut f = std::fs::OpenOptions::new()
             .create(true)
             .truncate(true)
             .write(true)
             .open(self.filename())?;
-        Ok(f.write_all(self.unit(registry_path, volume_root)?.as_bytes())?)
+        f.write_all(self.unit(registry_path, volume_root)?.as_bytes())?;
+        buckle::systemd::Systemd::new_system()
+            .await?
+            .reload()
+            .await?;
+        Ok(())
     }
 
-    pub fn remove_unit(&self) -> Result<()> {
-        Ok(std::fs::remove_file(self.filename())?)
+    pub async fn remove_unit(&self) -> Result<()> {
+        std::fs::remove_file(self.filename())?;
+        buckle::systemd::Systemd::new_system()
+            .await?
+            .reload()
+            .await?;
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::SystemdUnit;
     use crate::{CompiledPackage, Registry};
     use anyhow::Result;
     use tempfile::TempDir;
-
-    use super::SystemdUnit;
 
     fn load(registry: &Registry, name: &str, version: &str) -> Result<CompiledPackage> {
         registry.load(name, version)?.compile()
@@ -143,8 +140,6 @@ mod tests {
                 r#"
 [Unit]
 Description=Charon launcher for podman-test, version 0.0.2
-After= # FIXME: add dependencies
-After= # FIXME: this needs to follow the trunk microservices boot
 
 [Service]
 ExecStart=/usr/bin/charon -r testdata/registry launch podman-test 0.0.2 {}
