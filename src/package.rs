@@ -60,7 +60,24 @@ impl SourcePackage {
             .join(name)
             .join(format!("{}.json", version));
         let mut res: Self =
-            serde_json::from_reader(std::fs::OpenOptions::new().read(true).open(pb)?)?;
+            serde_json::from_reader(std::fs::OpenOptions::new().read(true).open(pb).map_err(
+                |e| {
+                    anyhow!(
+                        "Error loading {}/{} package definition: {}",
+                        name,
+                        version,
+                        e
+                    )
+                },
+            )?)
+            .map_err(|e| {
+                anyhow!(
+                    "Error parsing JSON in {}/{} package definition: {}",
+                    name,
+                    version,
+                    e
+                )
+            })?;
         res.root = Some(root.to_path_buf());
         Ok(res)
     }
