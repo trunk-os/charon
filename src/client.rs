@@ -145,6 +145,21 @@ impl QueryClient {
         Ok(v)
     }
 
+    pub async fn list(&mut self) -> Result<Vec<PackageTitle>> {
+        let list = self.client.list(Request::new(())).await?.into_inner();
+
+        let mut v = Vec::new();
+
+        for item in list.list {
+            v.push(PackageTitle {
+                name: item.name,
+                version: item.version,
+            })
+        }
+
+        Ok(v)
+    }
+
     pub async fn get_responses(&mut self, name: &str) -> Result<PromptResponses> {
         let title = ProtoPackageTitle {
             name: name.into(),

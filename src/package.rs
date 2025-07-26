@@ -607,6 +607,52 @@ impl Registry {
         self.root.clone()
     }
 
+    pub fn list(&self) -> Result<Vec<PackageTitle>> {
+        let mut v = Vec::new();
+
+        let mut items = std::fs::read_dir(self.root.join(PACKAGE_SUBPATH))?
+            .filter_map(|x| {
+                if let Ok(x) = x {
+                    if x.metadata().ok()?.is_dir() {
+                        return Some(x.path());
+                    }
+                }
+
+                None
+            })
+            .collect::<Vec<PathBuf>>();
+
+        items.sort();
+
+        for item in &items {
+            let name = item.file_name().unwrap().to_str().unwrap();
+            let mut inner = std::fs::read_dir(item)?
+                .filter_map(|x| {
+                    if let Ok(x) = x {
+                        if x.metadata().ok()?.is_file() {
+                            return Some(x.path());
+                        }
+                    }
+
+                    None
+                })
+                .collect::<Vec<PathBuf>>();
+
+            inner.sort();
+
+            for item in inner.iter().rev().collect::<Vec<&PathBuf>>() {
+                let version = item.file_stem().unwrap().to_str().unwrap();
+
+                v.push(PackageTitle {
+                    name: name.to_string(),
+                    version: version.to_string(),
+                });
+            }
+        }
+
+        Ok(v)
+    }
+
     pub fn installed(&self) -> Result<Vec<PackageTitle>> {
         let mut v = Vec::new();
 

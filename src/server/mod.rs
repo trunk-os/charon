@@ -207,6 +207,28 @@ impl Query for Server {
         Ok(tonic::Response::new(ProtoPackageTitleList { list: v }))
     }
 
+    async fn list(
+        &self,
+        _empty: tonic::Request<()>,
+    ) -> Result<tonic::Response<ProtoPackageTitleList>> {
+        let r = self.config.registry();
+
+        let list = r
+            .list()
+            .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
+
+        let mut v = Vec::new();
+
+        for item in list {
+            v.push(ProtoPackageTitle {
+                name: item.name,
+                version: item.version,
+            })
+        }
+
+        Ok(tonic::Response::new(ProtoPackageTitleList { list: v }))
+    }
+
     async fn get_responses(
         &self,
         title: tonic::Request<ProtoPackageTitle>,

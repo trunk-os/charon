@@ -1,6 +1,6 @@
 use crate::{
-    Client, Config, Input, InputType, Prompt, PromptCollection, PromptResponse, PromptResponses,
-    RegistryConfig, Server,
+    Client, Config, Input, InputType, PackageTitle, Prompt, PromptCollection, PromptResponse,
+    PromptResponses, RegistryConfig, Server,
 };
 use std::path::PathBuf;
 use tempfile::{tempdir, NamedTempFile};
@@ -196,6 +196,38 @@ async fn set_get_responses() {
         .unwrap();
 
     assert_eq!(responses, responses2);
+}
+
+#[tokio::test]
+async fn list() {
+    // NOTE: this table must be updated anytime testdata's registry is.
+    // Packages are sorted by name first, then in reverse order by version.
+    let table = vec![
+        ("bad-dependencies", vec!["0.0.3", "0.0.2", "0.0.1"]),
+        ("bad-name-version", vec!["0.0.2", "0.0.1"]),
+        ("no-variables", vec!["0.0.1"]),
+        ("plex", vec!["0.0.2", "0.0.1"]),
+        ("plex-qemu", vec!["0.0.2", "0.0.1"]),
+        ("podman-test", vec!["0.0.3", "0.0.2", "0.0.1"]),
+        ("with-dependencies", vec!["0.0.1"]),
+        ("with-prompts", vec!["0.0.1"]),
+    ];
+
+    let mut v = Vec::new();
+
+    for (name, versions) in table {
+        for version in versions {
+            v.push(PackageTitle {
+                name: name.into(),
+                version: version.into(),
+            })
+        }
+    }
+
+    let client = Client::new(start_server(true).await.0.to_path_buf()).unwrap();
+
+    let list = client.query().await.unwrap().list().await.unwrap();
+    assert_eq!(list, v)
 }
 
 #[tokio::test]
