@@ -144,7 +144,7 @@ async fn test_get_prompts() {
         Prompt {
             template: "private_path".into(),
             question: "Where do you want this mounted?".into(),
-            input_type: InputType::Name,
+            input_type: InputType::String,
         },
         Prompt {
             template: "private_size".into(),

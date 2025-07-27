@@ -199,7 +199,7 @@ impl QueryClient {
                 template: prompt.template.clone(),
                 question: prompt.question.clone(),
                 input_type: match prompt.input_type() {
-                    ProtoType::String => InputType::Name,
+                    ProtoType::String => InputType::String,
                     ProtoType::Integer => InputType::Integer,
                     ProtoType::SignedInteger => InputType::SignedInteger,
                     ProtoType::Boolean => InputType::Boolean,

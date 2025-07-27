@@ -186,7 +186,6 @@ impl From<PromptResponse> for ProtoPromptResponse {
                 Input::SignedInteger(_) => ProtoType::SignedInteger,
                 Input::Boolean(_) => ProtoType::Boolean,
                 Input::String(_) => ProtoType::String,
-                _ => ProtoType::String,
             }
             .into(),
         }
@@ -219,7 +218,7 @@ mod tests {
             Prompt {
                 template: "greeting".into(),
                 question: "how do we greet each other in computers?".into(),
-                input_type: InputType::Name,
+                input_type: InputType::String,
             },
             Prompt {
                 template: "shoesize".into(),
@@ -229,7 +228,7 @@ mod tests {
             Prompt {
                 template: "file".into(),
                 question: "Give me the name of your favorite file".into(),
-                input_type: InputType::Path,
+                input_type: InputType::String,
             },
         ]
         .to_vec();

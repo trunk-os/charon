@@ -22,7 +22,7 @@
     {
       "template": "private_path",
       "question": "Where do you want this mounted?",
-      "input_type": "path"
+      "input_type": "string"
     },
     {
       "template": "private_size",

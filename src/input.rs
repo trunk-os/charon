@@ -159,12 +159,8 @@ pub enum InputType {
     Integer,
     #[serde(rename = "signed_integer")]
     SignedInteger,
-    #[serde(rename = "select")]
-    Select(Vec<SelectOption>),
-    #[serde(rename = "name")]
-    Name,
-    #[serde(rename = "path")]
-    Path,
+    #[serde(rename = "string")]
+    String,
     #[serde(rename = "boolean")]
     Boolean,
 }
@@ -185,8 +181,6 @@ pub enum Input {
     String(String),
     #[serde(rename = "boolean")]
     Boolean(bool),
-    #[serde(rename = "null")]
-    Null,
 }
 
 impl std::fmt::Display for Input {
@@ -196,7 +190,6 @@ impl std::fmt::Display for Input {
             Input::SignedInteger(x) => x.to_string(),
             Input::String(x) => x.to_string(),
             Input::Boolean(x) => x.to_string(),
-            Input::Null => "null".to_string(),
         })
     }
 }

@@ -270,16 +270,10 @@ impl Query for Server {
                 template: prompt.template.clone(),
                 question: prompt.question.clone(),
                 input_type: match prompt.input_type {
-                    InputType::Name | InputType::Path => ProtoType::String,
+                    InputType::String => ProtoType::String,
                     InputType::Integer => ProtoType::Integer,
                     InputType::SignedInteger => ProtoType::SignedInteger,
                     InputType::Boolean => ProtoType::Boolean,
-                    _ => {
-                        return Err(tonic::Status::new(
-                            tonic::Code::Internal,
-                            "Unsupported input type in prompts".to_string(),
-                        ))
-                    }
                 }
                 .into(),
             })
