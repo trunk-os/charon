@@ -1,4 +1,4 @@
-use crate::Registry;
+use crate::{Registry, SYSTEMD_SERVICE_ROOT};
 use anyhow::{anyhow, Result};
 use serde::Deserialize;
 use std::path::PathBuf;
@@ -63,10 +63,15 @@ impl Default for RegistryConfig {
     }
 }
 
+fn default_systemd_root() -> Option<PathBuf> {
+    Some(SYSTEMD_SERVICE_ROOT.into())
+}
+
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct Config {
     pub registry: RegistryConfig,
     pub socket: PathBuf,
+    #[serde(default = "default_systemd_root")]
     pub systemd_root: Option<PathBuf>,
     pub log_level: Option<LogLevel>,
     pub debug: Option<bool>,

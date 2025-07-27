@@ -3,7 +3,7 @@ use anyhow::{anyhow, Result};
 use std::io::Write;
 use std::path::PathBuf;
 
-const SYSTEMD_SERVICE_ROOT: &str = "/etc/systemd/system";
+pub(crate) const SYSTEMD_SERVICE_ROOT: &str = "/etc/systemd/system";
 
 const UNIT_TEMPLATE: &str = r#"
 [Unit]
