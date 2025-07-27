@@ -82,17 +82,50 @@ impl SystemdUnit {
             .create(true)
             .truncate(true)
             .write(true)
-            .open(self.filename())?;
-        f.write_all(self.unit(registry_path, volume_root)?.as_bytes())?;
+            .open(self.filename())
+            .map_err(|e| {
+                anyhow!(
+                    "Could not create service unit {}: {}",
+                    self.filename().display(),
+                    e
+                )
+            })?;
+        f.write_all(
+            self.unit(registry_path, volume_root)
+                .map_err(|e| {
+                    anyhow!(
+                        "Could not generate service unit {}: {}",
+                        self.filename().display(),
+                        e
+                    )
+                })?
+                .as_bytes(),
+        )
+        .map_err(|e| {
+            anyhow!(
+                "Could not write service unit {}: {}",
+                self.filename().display(),
+                e
+            )
+        })?;
+
         buckle::systemd::Systemd::new_system()
             .await?
             .reload()
             .await?;
+
         Ok(())
     }
 
     pub async fn remove_unit(&self) -> Result<()> {
-        std::fs::remove_file(self.filename())?;
+        std::fs::remove_file(self.filename()).map_err(|e| {
+            anyhow!(
+                "Could not remove service unit {}: {}",
+                self.filename().display(),
+                e
+            )
+        })?;
+
         buckle::systemd::Systemd::new_system()
             .await?
             .reload()
