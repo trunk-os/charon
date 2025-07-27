@@ -12,7 +12,7 @@ async fn start_server(debug: bool) -> (PathBuf, Option<PathBuf>) {
     let pb2 = pb.clone();
 
     let systemd_root = if debug {
-        None
+        Some(crate::SYSTEMD_SERVICE_ROOT.into())
     } else {
         let tf = tempdir().unwrap();
         Some(tf.keep())
@@ -29,6 +29,7 @@ async fn start_server(debug: bool) -> (PathBuf, Option<PathBuf>) {
                 url: None,
             },
             systemd_root: inner,
+            charon_path: Some(crate::DEFAULT_CHARON_BIN_PATH.into()),
         })
         .start()
         .unwrap()

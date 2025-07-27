@@ -170,7 +170,11 @@ mod tests {
         let td = TempDir::new().unwrap();
         let path = td.path();
         let pkg = load(&registry, "podman-test", "0.0.2").unwrap();
-        let unit = SystemdUnit::new(pkg, None);
+        let unit = SystemdUnit::new(
+            pkg,
+            crate::SYSTEMD_SERVICE_ROOT.into(),
+            crate::DEFAULT_CHARON_BIN_PATH.into(),
+        );
         let text = unit
             .unit("testdata/registry".into(), path.to_path_buf())
             .unwrap();
