@@ -9,6 +9,8 @@ const GIT_PATH: &str = "git"; // FIXME: for now. This should be absolute or conf
 const GIT_DEFAULT_REPOSITORY: &str = "https://github.com/trunk-os/charon-packages";
 const REGISTRY_DEFAULT_PATH: &str = "/trunk/charon/registry";
 
+pub const DEFAULT_CHARON_BIN_PATH: &str = "/usr/bin/charon";
+
 #[derive(Debug, Clone, Deserialize, Default)]
 pub enum LogLevel {
     #[serde(rename = "warn")]
@@ -67,6 +69,10 @@ fn default_systemd_root() -> Option<PathBuf> {
     Some(SYSTEMD_SERVICE_ROOT.into())
 }
 
+fn default_charon_path() -> Option<PathBuf> {
+    Some(DEFAULT_CHARON_BIN_PATH.into())
+}
+
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct Config {
     pub registry: RegistryConfig,
@@ -75,6 +81,8 @@ pub struct Config {
     pub systemd_root: Option<PathBuf>,
     pub log_level: Option<LogLevel>,
     pub debug: Option<bool>,
+    #[serde(default = "default_charon_path")]
+    pub charon_path: Option<PathBuf>,
 }
 
 impl Config {

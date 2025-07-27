@@ -49,6 +49,13 @@ struct CreateUnitArgs {
     package_name: String,
     package_version: String,
     volume_root: PathBuf,
+    #[arg(
+        short = 's',
+        long = "systemd-root",
+        default_value = charon::SYSTEMD_SERVICE_ROOT,
+        help = "path to systemd unit directory"
+    )]
+    systemd_root: Option<PathBuf>,
 }
 
 #[derive(Parser, Debug, Clone)]
@@ -135,7 +142,8 @@ async fn main() -> Result<()> {
             let systemd = SystemdUnit::new(
                 r.load(&cu_args.package_name, &cu_args.package_version)?
                     .compile()?,
-                None,
+                cu_args.systemd_root.unwrap(),
+                std::env::current_exe().unwrap(),
             );
 
             systemd

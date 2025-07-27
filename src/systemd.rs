@@ -3,15 +3,15 @@ use anyhow::{anyhow, Result};
 use std::io::Write;
 use std::path::PathBuf;
 
-pub(crate) const SYSTEMD_SERVICE_ROOT: &str = "/etc/systemd/system";
+pub const SYSTEMD_SERVICE_ROOT: &str = "/etc/systemd/system";
 
 const UNIT_TEMPLATE: &str = r#"
 [Unit]
 Description=Charon launcher for @PACKAGE_NAME@, version @PACKAGE_VERSION@
 
 [Service]
-ExecStart=/usr/bin/charon -r @REGISTRY_PATH@ launch @PACKAGE_NAME@ @PACKAGE_VERSION@ @VOLUME_ROOT@
-ExecStop=/usr/bin/charon -r @REGISTRY_PATH@ stop @PACKAGE_NAME@ @PACKAGE_VERSION@ @VOLUME_ROOT@
+ExecStart=@CHARON_PATH@ -r @REGISTRY_PATH@ launch @PACKAGE_NAME@ @PACKAGE_VERSION@ @VOLUME_ROOT@
+ExecStop=@CHARON_PATH@ -r @REGISTRY_PATH@ stop @PACKAGE_NAME@ @PACKAGE_VERSION@ @VOLUME_ROOT@
 Restart=always
 
 [Install]
@@ -21,14 +21,16 @@ Alias=@PACKAGE_FILENAME@.service
 #[derive(Debug, Clone)]
 pub struct SystemdUnit {
     package: CompiledPackage,
-    service_root: PathBuf,
+    systemd_root: PathBuf,
+    charon_path: PathBuf,
 }
 
 impl SystemdUnit {
-    pub fn new(package: CompiledPackage, service_root: Option<PathBuf>) -> Self {
+    pub fn new(package: CompiledPackage, systemd_root: PathBuf, charon_path: PathBuf) -> Self {
         Self {
             package,
-            service_root: service_root.unwrap_or_else(|| SYSTEMD_SERVICE_ROOT.into()),
+            systemd_root,
+            charon_path,
         }
     }
 
@@ -39,7 +41,7 @@ impl SystemdUnit {
     pub fn filename(&self) -> PathBuf {
         format!(
             "{}/{}.service",
-            self.service_root.display(),
+            self.systemd_root.display(),
             self.package.title
         )
         .into()
@@ -59,6 +61,7 @@ impl SystemdUnit {
                         "PACKAGE_FILENAME" => out.push_str(&self.package.title.to_string()),
                         "VOLUME_ROOT" => out.push_str(volume_root.to_str().unwrap_or_default()),
                         "REGISTRY_PATH" => out.push_str(registry_path.to_str().unwrap_or_default()),
+                        "CHARON_PATH" => out.push_str(self.charon_path.clone().to_str().unwrap()),
                         _ => return Err(anyhow!("invalid template variable '{}'", variable)),
                     };
                     variable = String::new();
@@ -137,7 +140,7 @@ impl SystemdUnit {
 #[cfg(test)]
 mod tests {
     use super::SystemdUnit;
-    use crate::{CompiledPackage, Registry};
+    use crate::{CompiledPackage, Registry, SYSTEMD_SERVICE_ROOT};
     use anyhow::Result;
     use tempfile::TempDir;
 
@@ -148,7 +151,11 @@ mod tests {
     #[test]
     fn unit_names() {
         let registry = Registry::new("testdata/registry".into());
-        let unit = SystemdUnit::new(load(&registry, "podman-test", "0.0.2").unwrap(), None);
+        let unit = SystemdUnit::new(
+            load(&registry, "podman-test", "0.0.2").unwrap(),
+            SYSTEMD_SERVICE_ROOT.into(),
+            "/usr/bin/charon".into(),
+        );
         assert_eq!(
             unit.filename().as_os_str(),
             "/etc/systemd/system/podman-test-0.0.2.service"

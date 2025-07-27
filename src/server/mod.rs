@@ -149,7 +149,11 @@ impl Control for Server {
             .compile()
             .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
 
-        let unit = SystemdUnit::new(pkg, self.config.systemd_root.clone());
+        let unit = SystemdUnit::new(
+            pkg,
+            self.config.systemd_root.clone().unwrap(),
+            self.config.charon_path.clone().unwrap(),
+        );
         unit.create_unit(r.path(), title.volume_root.into())
             .await
             .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
@@ -172,7 +176,11 @@ impl Control for Server {
             .compile()
             .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;
 
-        let unit = SystemdUnit::new(pkg, self.config.systemd_root.clone());
+        let unit = SystemdUnit::new(
+            pkg,
+            self.config.systemd_root.clone().unwrap(),
+            self.config.charon_path.clone().unwrap(),
+        );
         unit.remove_unit()
             .await
             .map_err(|e| tonic::Status::new(tonic::Code::Internal, e.to_string()))?;

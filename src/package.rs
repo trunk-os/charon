@@ -263,8 +263,8 @@ impl From<ProtoInstallState> for InstallStatus {
 }
 
 impl CompiledPackage {
-    pub fn systemd_unit(&self, service_root: Option<PathBuf>) -> SystemdUnit {
-        SystemdUnit::new(self.clone(), service_root)
+    pub fn systemd_unit(&self, systemd_root: PathBuf, charon_path: PathBuf) -> SystemdUnit {
+        SystemdUnit::new(self.clone(), systemd_root, charon_path)
     }
 
     fn installed_path(&self) -> PathBuf {
