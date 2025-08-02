@@ -112,9 +112,17 @@ impl SystemdUnit {
             )
         })?;
 
-        buckle::systemd::Systemd::new_system()
-            .await?
-            .reload()
+        let client = buckle::systemd::Systemd::new_system().await?;
+        client.reload().await?;
+        client
+            .load_unit(
+                self.filename()
+                    .file_name()
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .to_string(),
+            )
             .await?;
 
         Ok(())
@@ -133,6 +141,7 @@ impl SystemdUnit {
             .await?
             .reload()
             .await?;
+
         Ok(())
     }
 }
