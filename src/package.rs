@@ -283,10 +283,7 @@ impl CompiledPackage {
             .truncate(true)
             .write(true)
             .open(self.installed_path())?;
-        let client = buckle::systemd::Systemd::new_system().await?;
-        client
-            .load_unit(format!("{}.service", self.title.to_string()))
-            .await?;
+
         Ok(())
     }
 

@@ -115,20 +115,17 @@ impl SystemdUnit {
         let client = buckle::systemd::Systemd::new_system().await?;
         client.reload().await?;
         client
-            .load_unit(
-                self.filename()
-                    .file_name()
-                    .unwrap()
-                    .to_str()
-                    .unwrap()
-                    .to_string(),
-            )
+            .start(format!("{}.service", self.package.title.to_string()))
             .await?;
 
         Ok(())
     }
 
     pub async fn remove_unit(&self) -> Result<()> {
+        let client = buckle::systemd::Systemd::new_system().await?;
+        let _ = client
+            .stop(format!("{}.service", self.package.title.to_string()))
+            .await;
         std::fs::remove_file(self.filename()).map_err(|e| {
             anyhow!(
                 "Could not remove service unit {}: {}",
@@ -137,10 +134,7 @@ impl SystemdUnit {
             )
         })?;
 
-        buckle::systemd::Systemd::new_system()
-            .await?
-            .reload()
-            .await?;
+        client.reload().await?;
 
         Ok(())
     }
